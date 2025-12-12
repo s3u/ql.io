@@ -305,18 +305,38 @@ function createConsole(options, clusterWrapper, cb) {
         emitter.emit('warning', message);
     });
     
-    // Create console apps using the modernized console module
+    // Create console using the modernized console module
     try {
-        const consoleApp = Console.app(options);
-        const monitoringApp = Console.monitoringApp ? Console.monitoringApp(options) : consoleApp;
+        // Set up the logger function for the engine
+        options.loggerFn = function(engineInstance) {
+            addFileLoggers(options, engineInstance);
+        };
         
-        if (cb) {
-            cb(consoleApp, monitoringApp, emitter);
-        }
+        // The Console constructor takes options and a callback
+        const console = new Console(options, function(app, monApp, engine) {
+            // Merge the engine emitter events with our emitter
+            if (engine) {
+                engine.on('info', function(event, message) {
+                    emitter.emit('info', event, message);
+                });
+                engine.on('error', function(event, message) {
+                    emitter.emit('error', event, message);
+                });
+                engine.on('warning', function(event, message) {
+                    emitter.emit('warning', event, message);
+                });
+            }
+            
+            if (cb) {
+                cb(app, monApp, emitter);
+            }
+        });
     } catch (error) {
+        console.error('Failed to create console:', error);
         // Fallback to mock apps for testing if console module isn't ready
         const mockApp = {
             listen: function(port, callback) {
+                console.log('Mock app listening on port', port);
                 if (callback) callback();
                 return { close: function() {} };
             }
@@ -324,6 +344,7 @@ function createConsole(options, clusterWrapper, cb) {
         
         const mockMonApp = {
             listen: function(port, callback) {
+                console.log('Mock monitoring app listening on port', port);
                 if (callback) callback();
                 return { close: function() {} };
             }
