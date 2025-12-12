@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title><%=title%></title>
+    <link rel="shortcut icon" href="/images/favicon.ico"/>
+    <link rel="stylesheet" type="text/css" href="/css/console.css"/>
+    <link rel="stylesheet" type="text/css" href="/css/codemirror.css"/>
+    <link rel="stylesheet" type="text/css" href="/css/jquery-ui.css"/>
+    <link rel="stylesheet" type="text/css" href="/css/qlio-editor.css"/>
+</head>
+
+<body>
+    <div id="header">
+        <h1>ql.io Console</h1>
+        <p>Interactive SQL-like queries for REST APIs</p>
+    </div>
+
+    <div id="splitter">
+        <div id="top-pane">
+            <div id="conn-status"></div>
+            <div id="query">
+                <textarea class="query-input" id="query-input"><%=script%></textarea>
+            </div>
+
+            <div>
+                <div class="parse-status" id="parse-status"></div>
+                <div class="util-links" id="util-links">
+                    <a id="run" href="#" class="button">run</a>
+                    <a id="debug" href="#" class="button">debug</a>
+                    <a id="step" href="#" class="button">step</a>
+                    <a id="copy-uri" href="#" class="button">copy uri</a>
+                </div>
+            </div>
+
+            <img id="dependencyMap" src="">
+            <div class='progress results' id='results'></div>
+        </div>
+
+        <div id="bottom-pane">
+            <div id="har-view">
+                <div id="har-title">Request/Response Traces</div>
+                <div id="har"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="/scripts/jquery-min.js"></script>
+    <script type="text/javascript" src="/scripts/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="/scripts/compiler.js"></script>
+    <script type="text/javascript" src="/scripts/console.js"></script>
+    <script type="text/javascript" src="/scripts/splitter.js"></script>
+    <script type="text/javascript" src="/scripts/codemirror.js"></script>
+    <script type="text/javascript" src="/scripts/qlio-editor.js"></script>
+</body>
+</html>

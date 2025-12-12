@@ -203,15 +203,27 @@ const Console = module.exports = function(opts, cb) {
         // The require below has paths prepended so that they can be loaded relative to this
         // (console) module and not its dependents. If not, Node would look for those modules
         // in the app's node_modules, which introduces a dependency from app to these modules.
-        app.use(browserify(
-            {
-                mount : '/scripts/compiler.js',
-                require : [ 'ql.io-compiler',
-                    'headers',
-                    'mustache',
-                    'events'],
-                filter : require('uglify-js')
-            }));
+        // Create browserify bundle for client-side modules
+        const browserifyMiddleware = browserify({
+            require: [
+                'ql.io-compiler',
+                'headers', 
+                'mustache',
+                'events'
+            ]
+        });
+        
+        app.get('/scripts/compiler.js', function(req, res) {
+            res.set('Content-Type', 'application/javascript');
+            browserifyMiddleware.bundle(function(err, buf) {
+                if (err) {
+                    console.error('Browserify bundle error:', err);
+                    res.status(500).send('// Browserify bundle error: ' + err.message);
+                } else {
+                    res.send(buf);
+                }
+            });
+        });
         app.get('/console', function(req, res) {
             res.render(__dirname + '/public/views/console/index.ejs', {
                 title: 'ql.io',
