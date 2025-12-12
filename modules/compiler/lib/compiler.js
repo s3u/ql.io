@@ -16,25 +16,26 @@
 
 'use strict';
 
-var ql = require('./peg/ql.js'),
-    assert = require('assert'),
-    strParser = require('ql.io-str-template'),
-    _ = require('underscore');
+const ql = require('./peg/ql.js');
+const assert = require('assert');
+const strParser = require('ql.io-str-template');
+const _ = require('underscore');
 
 exports.version = require('../package.json').version;
 
-var cache = {};
+const cache = {};
 exports.compile = function(script, loaded) {
     assert.ok(script, 'script is undefined');
 
-    var compiled, cooked, cacheKey;
+    let compiled, cooked, cacheKey;
 
     cacheKey = script;
     cooked = cache[cacheKey];
     cache['_tables'] = loaded
-    if(cooked) {
-        return cooked;
-    }
+    // Temporarily disable cache for debugging
+    // if(cooked) {
+    //     return cooked;
+    // }
 
     compiled = ql.parse(script);
     cooked = plan(compiled);
@@ -50,16 +51,17 @@ exports.compile = function(script, loaded) {
 // Once done, this returns a 'return' statement and its dependencies
 function plan(compiled) {
     // Collect all assignments
-    var symbols = {}, i, line;
-    var ret, single, count = 0;
-    var comments = [];
-    var creates = {};
-    var maxid = 0;
+    const symbols = {};
+    let i, line;
+    let ret, single, count = 0;
+    let comments = [];
+    let creates = {};
+    let maxid = 0;
     function divescope(lines, scope) {
         if (!lines){
             return;
         }
-        var i, line;
+        let i, line;
         for (i = 0; i < lines.length; i++) {
             line = lines[i];
             maxid = line.id > maxid ? line.id : maxid;
@@ -184,7 +186,7 @@ function plan(compiled) {
     walk(ret, symbols);
 
     // Reverse links from dependencies and pickup orphans
-    var used = [];
+    const used = [];
     function rev(node) {
         _.each(node.dependsOn, function(dependency) {
             used.push(dependency.id);
@@ -210,7 +212,7 @@ function plan(compiled) {
     // Insert all orphans at the beginning of dep arr. Orphans occur when dependencies are based on
     // body templates but the language has no way of knowing such dependencies.
     // Orphans include create table statements.
-    var orphans = [];
+    const orphans = [];
     creates = [];
     _.each(compiled, function(line) {
         if(line.type !== 'comment' && line.type !== 'return' && used.indexOf(line.id) === -1) {
@@ -236,7 +238,8 @@ function plan(compiled) {
 
 // Recursively walk up from the return statement to create the dependency tree.
 function walk(line, symbols) {
-    var type = line.type, dependency;
+    const type = line.type;
+    let dependency;
     line.dependsOn = line.dependsOn || [];
     switch(type) {
         case 'ref':
@@ -310,7 +313,7 @@ function walk(line, symbols) {
             }
             break;
         case 'logic':
-            var condDepends = logicVars(line, symbols);
+            const condDepends = logicVars(line, symbols);
             _.each(condDepends, function(dependency){
                 addDep(line, line.dependsOn, dependency, symbols);
                 walk(dependency, symbols);
@@ -340,9 +343,9 @@ function walk(line, symbols) {
 }
 
 function addListener(node, listener) {
-    var contains = false;
+    let contains = false;
     node.listeners = node.listeners || [];
-    for(var i = 0; i < node.listeners.length; i++) {
+    for(let i = 0; i < node.listeners.length; i++) {
         if(node.listeners[i].id === listener.id) {
             contains = true;
             break;
@@ -354,7 +357,7 @@ function addListener(node, listener) {
 }
 
 function addDep(line, dependsOn, dependency, symbols) {
-    var contains = false;
+    let contains = false;
     dependency.listeners = dependency.listeners || [];
     for(i = 0; i < dependency.listeners.length; i++) {
         if(dependency.listeners[i].id === line.id) {
@@ -385,16 +388,16 @@ function addDep(line, dependsOn, dependency, symbols) {
 //
 function introspectString(v, symbols, dependsOn, line) {
     try {
-        var parsed = strParser.parse(v);
+        const parsed = strParser.parse(v);
         _.each(parsed.vars, function(refname) {
-            var index = refname.indexOf('.');
+            const index = refname.indexOf('.');
             if(index > 0) {
                 refname = refname.substring(0, index);
             }
-            var dependency = symbols[refname];
+            const dependency = symbols[refname];
             if(dependency) {
-                var contains = false;
-                for(var i = 0; i < dependsOn.length; i++) {
+                let contains = false;
+                for(let i = 0; i < dependsOn.length; i++) {
                     contains = _.isEqual(dependsOn[i], dependency);
                     if(contains) {
                         break;
@@ -426,7 +429,7 @@ function introspectObject(obj, symbols, dependsOn, line) {
                 introspectString(v, symbols, dependsOn, line);
             }
             else if(_.isArray(v)) {
-                var arr = [];
+                const arr = [];
                 _.each(v, function(vi) {
                     introspectObject(vi, symbols, dependsOn, line);
                 });
@@ -440,7 +443,7 @@ function introspectObject(obj, symbols, dependsOn, line) {
 }
 
 function introspectFrom(line, froms, symbols, parent) {
-    var j, from, refname, dependency;
+    let j, from, refname, dependency;
     for(j = 0; j < froms.length; j++) {
         from = froms[j];
         if(from.name.indexOf('{') === 0) {
@@ -463,7 +466,7 @@ function introspectFrom(line, froms, symbols, parent) {
                     addDep(line, line.dependsOn, dependency, symbols);
                 }
             }
-            var hasverb = dependency[line.type];
+            const hasverb = dependency[line.type];
             if(hasverb && hasverb.expect){
                 line.expects = hasverb.expect;
 
@@ -477,7 +480,7 @@ function introspectFrom(line, froms, symbols, parent) {
 }
 
 function introspectWhere(line, symbols, parent) {
-    var j, where, k, ref, refname, index, dependency;
+    let j, where, k, ref, refname, index, dependency;
     line.dependsOn = line.dependsOn || [];
     if(line.whereCriteria) {
         for(j = 0; j < line.whereCriteria.length; j++) {
@@ -490,7 +493,7 @@ function introspectWhere(line, symbols, parent) {
                             if(_.isString(ref) && ref.indexOf('{') === 0) {
                                 if(ref.indexOf('{^') == 0) {
                                     refname = ref.substring(2, ref.length - 1);
-                                    var to = parent || line;
+                                    const to = parent || line;
                                     to.preRequisites = to.preRequisites || [];
                                  	to.preRequisites.push(refname);
                                  	where.rhs.value[k] = where.rhs.value[k].replace('{^','{');
@@ -522,7 +525,7 @@ function introspectWhere(line, symbols, parent) {
                     if(_.isString(ref) && ref.indexOf('{') === 0) {
                         if(ref.indexOf('{^') == 0) {
                             refname = ref.substring(2, ref.length - 1);
-                            var to = parent || line;
+                            const to = parent || line;
                             to.preRequisites = to.preRequisites || [];
                          	to.preRequisites.push(refname);
                          	where.rhs.value = where.rhs.value.replace('{^','{');
@@ -573,7 +576,7 @@ function introspectWhere(line, symbols, parent) {
 // find all variables that appears in a logic condition.
 function logicVars(condition, symbols){
     if(_.isString(condition.values)){
-        var conditionDep = symbols[condition.values];
+        const conditionDep = symbols[condition.values];
         if (conditionDep) {
             return [conditionDep];
         }else{

@@ -16,19 +16,19 @@
 
 "use strict";
 
-var compiler = require('../lib/compiler');
+const compiler = require('../lib/compiler');
 
-exports['show'] = function (test) {
-    var q = "show tables";
-    var statement = compiler.compile(q);
-    test.equals(statement.rhs.type, 'show');
-    test.done();
-};
+describe('Show Tests', () => {
+    test('show', () => {
+        const q = "show tables";
+        const statement = compiler.compile(q);
+        expect(statement.rhs.type).toBe('show');
+    });
 
-exports['show assign'] = function (test) {
-    var q = "tables = show tables; return tables;";
-    var statement = compiler.compile(q);
-    test.equal(statement.rhs.dependsOn[0].assign, 'tables');
-    test.equal(statement.rhs.dependsOn[0].listeners[0].type, 'ref');
-    test.done();
-};
+    test('show assign', () => {
+        const q = "tables = show tables; return tables;";
+        const statement = compiler.compile(q);
+        expect(statement.rhs.dependsOn[0].assign).toBe('tables');
+        expect(statement.rhs.dependsOn[0].listeners[0].type).toBe('ref');
+    });
+});

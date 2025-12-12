@@ -16,20 +16,21 @@
 
 "use strict";
 
-var compiler = require('../lib/compiler');
+const compiler = require('../lib/compiler');
 
-exports['simple'] = function(test) {
-    var q = '-- Define an object\n\
+describe('Array Tests', () => {
+    test('simple', () => {
+        const q = '-- Define an object\n\
             n = [["Gap","Addidas","Gravati2a"], ["Gap","Addidasf"], ["Gravati","Addis"]];\
             -- Return now\n\
             return n;';
-    var compiled = compiler.compile(q);
-    test.equals(compiled.type, 'return');
-    test.equals(compiled.comments[0].text, 'Return now');
-    test.equals(compiled.rhs.ref, 'n');
-    test.deepEqual(compiled.rhs.dependsOn[0].object,
-        [['Gap', 'Addidas', 'Gravati2a'], ['Gap', 'Addidasf'], ['Gravati', 'Addis']]);
-    test.equals(compiled.rhs.dependsOn[0].type, 'define');
-    test.equals(compiled.rhs.dependsOn[0].assign, 'n');
-    test.done();
-};
+        const compiled = compiler.compile(q);
+        expect(compiled.type).toBe('return');
+        expect(compiled.comments[0].text).toBe('Return now');
+        expect(compiled.rhs.ref).toBe('n');
+        expect(compiled.rhs.dependsOn[0].object).toEqual(
+            [['Gap', 'Addidas', 'Gravati2a'], ['Gap', 'Addidasf'], ['Gravati', 'Addis']]);
+        expect(compiled.rhs.dependsOn[0].type).toBe('define');
+        expect(compiled.rhs.dependsOn[0].assign).toBe('n');
+    });
+});

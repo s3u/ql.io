@@ -16,26 +16,28 @@
 
 "use strict";
 
-var compiler = require('../lib/compiler');
+const compiler = require('../lib/compiler');
 
-exports['simple'] = function(test) {
-    var q = "create table twitter.public via mongodb on select get from 'http://twitter.com/statuses/public_timeline.{^format}'";
-    var compiled = compiler.compile(q);
-    test.equal(compiled.rhs.dependsOn[0].type, 'create');
-    test.equal(compiled.rhs.dependsOn[0].name, 'twitter.public');
-    test.deepEqual(compiled.rhs.dependsOn[0].select, { method: 'get',
-        uri: 'http://twitter.com/statuses/public_timeline.{^format}',
-        defaults: {},
-        aliases: {},
-        headers: {},
-        resultSet: '',
-        cache: {},
-        body: '' });
-    test.done();
-};
+describe('Connector Tests', () => {
+    test('simple', () => {
+        const q = "create table twitter.public via mongodb on select get from 'http://twitter.com/statuses/public_timeline.{^format}'";
+        const compiled = compiler.compile(q);
+        expect(compiled.rhs.dependsOn[0].type).toBe('create');
+        expect(compiled.rhs.dependsOn[0].name).toBe('twitter.public');
+        expect(compiled.rhs.dependsOn[0].select).toEqual({ 
+            method: 'get',
+            uri: 'http://twitter.com/statuses/public_timeline.{^format}',
+            defaults: {},
+            aliases: {},
+            headers: {},
+            resultSet: '',
+            cache: {},
+            body: '' 
+        });
+    });
 
-exports['multiple actions'] = function(test) {
-    var q = 'create table bitly.shorten\
+    test('multiple actions', () => {
+        const q = 'create table bitly.shorten\
   on insert get from "http://api.bitly.com/v3/shorten?login={^login}&apiKey={^apikey}&longUrl={^longUrl}&format={format}"\
             using defaults apikey = "{config.tables.bitly.shorten.apikey}", login = "{config.tables.bitly.shorten.login}", format = "json"\
             using patch "shorten.js"\
@@ -44,38 +46,42 @@ exports['multiple actions'] = function(test) {
             using defaults apikey = "{config.tables.bitly.shorten.apikey}", login = "{config.tables.bitly.shorten.login}", format = "json"\
             using patch "shorten.js"\
             resultset "data.expand"';
-    var compiled = compiler.compile(q);
-    test.deepEqual(compiled.rhs.dependsOn[0].name, 'bitly.shorten');
-    test.deepEqual(compiled.rhs.dependsOn[0].insert, { method: 'get',
-        uri: 'http://api.bitly.com/v3/shorten?login={^login}&apiKey={^apikey}&longUrl={^longUrl}&format={format}',
-        defaults:
-        { apikey: '{config.tables.bitly.shorten.apikey}',
-            login: '{config.tables.bitly.shorten.login}',
-            format: 'json' },
-        aliases: {},
-        headers: {},
-        resultSet: 'data.url',
-        cache: {},
-        patch: 'shorten.js',
-        body: '' });
-    test.deepEqual(compiled.rhs.dependsOn[0].select, { method: 'get',
-        uri: 'http://api.bitly.com/v3/expand?login={^login}&apiKey={^apikey}&shortUrl={^shortUrl}&format={format}',
-        defaults:
-        { apikey: '{config.tables.bitly.shorten.apikey}',
-            login: '{config.tables.bitly.shorten.login}',
-            format: 'json' },
-        aliases: {},
-        headers: {},
-        resultSet: 'data.expand',
-        cache: {},
-        patch: 'shorten.js',
-        body: '' });
-    test.done();
-};
+        const compiled = compiler.compile(q);
+        expect(compiled.rhs.dependsOn[0].name).toEqual('bitly.shorten');
+        expect(compiled.rhs.dependsOn[0].insert).toEqual({ 
+            method: 'get',
+            uri: 'http://api.bitly.com/v3/shorten?login={^login}&apiKey={^apikey}&longUrl={^longUrl}&format={format}',
+            defaults: { 
+                apikey: '{config.tables.bitly.shorten.apikey}',
+                login: '{config.tables.bitly.shorten.login}',
+                format: 'json' 
+            },
+            aliases: {},
+            headers: {},
+            resultSet: 'data.url',
+            cache: {},
+            patch: 'shorten.js',
+            body: '' 
+        });
+        expect(compiled.rhs.dependsOn[0].select).toEqual({ 
+            method: 'get',
+            uri: 'http://api.bitly.com/v3/expand?login={^login}&apiKey={^apikey}&shortUrl={^shortUrl}&format={format}',
+            defaults: { 
+                apikey: '{config.tables.bitly.shorten.apikey}',
+                login: '{config.tables.bitly.shorten.login}',
+                format: 'json' 
+            },
+            aliases: {},
+            headers: {},
+            resultSet: 'data.expand',
+            cache: {},
+            patch: 'shorten.js',
+            body: '' 
+        });
+    });
 
-exports['media type'] = function(test) {
-
-    var script = '-- This is a mapping for eBay\'s [GetMyEbayBuying](http://developer.ebay.com/DevZone/xml/docs/Reference/ebay/GetMyeBayBuying.html) API. Here is an example: select * from ebay.trading.getmybuying\n\
+    test('media type', () => {
+        const script = '-- This is a mapping for eBay\'s [GetMyEbayBuying](http://developer.ebay.com/DevZone/xml/docs/Reference/ebay/GetMyeBayBuying.html) API. Here is an example: select * from ebay.trading.getmybuying\n\
 create table ebay.trading.getmyebaybuying\
   on select post to "{config.tables.ebay.trading.myebaybuying.uri}"\
     using headers "Content-Type"= "application/xml; charset=UTF-8",\
@@ -93,14 +99,12 @@ create table ebay.trading.getmyebaybuying\
               eBayAuthToken = "{config.tables.ebay.trading.myebaybuying.defaults.eBayAuthToken}"\
     using patch "getmyebaybuying.js"\
     using bodyTemplate "getmyebaybuying.xml.mu" type "application/xml"';
-    var compiled = compiler.compile(script);
-    test.equals(compiled.rhs.dependsOn[0].select.body.type, 'application/xml');
-    test.done();
-};
+        const compiled = compiler.compile(script);
+        expect(compiled.rhs.dependsOn[0].select.body.type).toBe('application/xml');
+    });
 
-exports['media type param'] = function(test) {
-
-    var script = '-- This is a mapping for eBay\'s [GetMyEbayBuying](http://developer.ebay.com/DevZone/xml/docs/Reference/ebay/GetMyeBayBuying.html) API. Here is an example: select * from ebay.trading.getmybuying\n\
+    test('media type param', () => {
+        const script = '-- This is a mapping for eBay\'s [GetMyEbayBuying](http://developer.ebay.com/DevZone/xml/docs/Reference/ebay/GetMyeBayBuying.html) API. Here is an example: select * from ebay.trading.getmybuying\n\
 create table ebay.trading.getmyebaybuying\n\
   on select post to "{config.tables.ebay.trading.myebaybuying.uri}"\n\
     using headers "Content-Type"= "application/xml; charset=UTF-8",\n\
@@ -119,19 +123,12 @@ create table ebay.trading.getmyebaybuying\n\
     using patch "getmyebaybuying.js"\n\
     using bodyTemplate "getmyebaybuying.xml.mu" type "application/xml;foo=bar"';
 
-    try {
-        var compiled = compiler.compile(script);
-        test.equals(compiled.rhs.dependsOn[0].select.body.type, 'application/xml;foo=bar');
-        test.done();
-    }
-    catch(e) {
-        console.log(e.stack || e);
-    }
-};
+        const compiled = compiler.compile(script);
+        expect(compiled.rhs.dependsOn[0].select.body.type).toBe('application/xml;foo=bar');
+    });
 
-exports['media type form'] = function(test) {
-
-    var script = '-- This is a mapping for eBay\'s [GetMyEbayBuying](http://developer.ebay.com/DevZone/xml/docs/Reference/ebay/GetMyeBayBuying.html) API. Here is an example: select * from ebay.trading.getmybuying\n\
+    test('media type form', () => {
+        const script = '-- This is a mapping for eBay\'s [GetMyEbayBuying](http://developer.ebay.com/DevZone/xml/docs/Reference/ebay/GetMyeBayBuying.html) API. Here is an example: select * from ebay.trading.getmybuying\n\
 create table ebay.trading.getmyebaybuying\n\
   on select post to "{config.tables.ebay.trading.myebaybuying.uri}"\n\
     using headers "Content-Type"= "application/xml; charset=UTF-8",\n\
@@ -150,62 +147,53 @@ create table ebay.trading.getmyebaybuying\n\
     using patch "getmyebaybuying.js"\n\
     using bodyTemplate "getmyebaybuying.xml.mu" type "application/x-www-form-urlencoded"';
 
-    try {
-        var compiled = compiler.compile(script);
-        test.equals(compiled.rhs.dependsOn[0].select.body.type, 'application/x-www-form-urlencoded');
-        test.done();
-    }
-    catch(e) {
-        console.log(e.stack || e);
-    }
-};
+        const compiled = compiler.compile(script);
+        expect(compiled.rhs.dependsOn[0].select.body.type).toBe('application/x-www-form-urlencoded');
+    });
 
-exports['auth'] = function(test) {
-    var script = 'create table ebay.finding.items on select get from "{config.tables.ebay.finding.items.url}" authenticate using "authmod"';
-    try {
-        var compiled = compiler.compile(script);
-        test.equals(compiled.rhs.dependsOn[0].select.auth, 'authmod');
-        test.done();
-    }
-    catch(e) {
-        console.log(e.stack || e);
-    }
-}
+    test('auth', () => {
+        const script = 'create table ebay.finding.items on select get from "{config.tables.ebay.finding.items.url}" authenticate using "authmod"';
+        const compiled = compiler.compile(script);
+        expect(compiled.rhs.dependsOn[0].select.auth).toBe('authmod');
+    });
 
-exports['create-many'] = function(test) {
-    var script = 'create table one on select get from "url1"\n\
-                  create table two on select post to "url2"';
-    var compiled = compiler.compile(script);
+    test('create-many', () => {
+        const script = 'create table one on select get from "url1"\n\
+                      create table two on select post to "url2"';
+        const compiled = compiler.compile(script);
 
-    test.deepEqual(compiled.rhs.dependsOn[0].select, { method: 'get',
-        uri: 'url1',
-        defaults: {},
-        aliases: {},
-        headers: {},
-        resultSet: '',
-        cache: {},
-        body: '' });
+        expect(compiled.rhs.dependsOn[0].select).toEqual({ 
+            method: 'get',
+            uri: 'url1',
+            defaults: {},
+            aliases: {},
+            headers: {},
+            resultSet: '',
+            cache: {},
+            body: '' 
+        });
 
-    test.deepEqual(compiled.rhs.dependsOn[1].select, { method: 'post',
-        uri: 'url2',
-        defaults: {},
-        aliases: {},
-        headers: {},
-        resultSet: '',
-        cache: {},
-        body: '' });
-    test.done();
-}
+        expect(compiled.rhs.dependsOn[1].select).toEqual({ 
+            method: 'post',
+            uri: 'url2',
+            defaults: {},
+            aliases: {},
+            headers: {},
+            resultSet: '',
+            cache: {},
+            body: '' 
+        });
+    });
 
-exports['create-deps'] = function(test) {
-    var script = "create table mytable\
-                    on select get from 'someuri';\n\
-                  resp = select * from mytable;\n\
-                  return '{resp.$..item}'";
-    var plan = compiler.compile(script);
-    test.equals(plan.rhs.dependsOn.length, 1);
-    test.equals(plan.rhs.dependsOn[0].type, 'select');
-    test.equals(plan.rhs.dependsOn[0].dependsOn.length, 1);
-    test.equals(plan.rhs.dependsOn[0].dependsOn[0].type, 'create');
-    test.done();
-}
+    test('create-deps', () => {
+        const script = "create table mytable\
+                        on select get from 'someuri';\n\
+                      resp = select * from mytable;\n\
+                      return '{resp.$..item}'";
+        const plan = compiler.compile(script);
+        expect(plan.rhs.dependsOn.length).toBe(1);
+        expect(plan.rhs.dependsOn[0].type).toBe('select');
+        expect(plan.rhs.dependsOn[0].dependsOn.length).toBe(1);
+        expect(plan.rhs.dependsOn[0].dependsOn[0].type).toBe('create');
+    });
+});
