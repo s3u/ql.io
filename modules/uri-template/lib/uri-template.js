@@ -28,7 +28,7 @@ module.exports = (function(){
       + '"';
   }
 
-  var result = {
+  const result = {
     /*
      * Parses the input with a generated parser. If the parsing is successfull,
      * returns a value explicitly or implicitly specified by the grammar from
@@ -36,7 +36,7 @@ module.exports = (function(){
      * unsuccessful, throws |PEG.parser.SyntaxError| describing the error.
      */
     parse: function(input, startRule) {
-      var parseFunctions = {
+      const parseFunctions = {
         "URITemplate": parse_URITemplate,
         "literal": parse_literal,
         "expression": parse_expression,
@@ -57,16 +57,16 @@ module.exports = (function(){
         startRule = "URITemplate";
       }
 
-      var pos = 0;
-      var reportFailures = 0;
-      var rightmostFailuresPos = 0;
-      var rightmostFailuresExpected = [];
+      let pos = 0;
+      let reportFailures = 0;
+      let rightmostFailuresPos = 0;
+      let rightmostFailuresExpected = [];
 
       function padLeft(input, padding, length) {
-        var result = input;
+        let result = input;
 
-        var padLength = length - input.length;
-        for (var i = 0; i < padLength; i++) {
+        const padLength = length - input.length;
+        for (let i = 0; i < padLength; i++) {
           result = padding + result;
         }
 
@@ -74,9 +74,9 @@ module.exports = (function(){
       }
 
       function escape(ch) {
-        var charCode = ch.charCodeAt(0);
-        var escapeChar;
-        var length;
+        const charCode = ch.charCodeAt(0);
+        let escapeChar;
+        let length;
 
         if (charCode <= 0xFF) {
           escapeChar = 'x';
@@ -103,8 +103,8 @@ module.exports = (function(){
       }
 
       function parse_URITemplate() {
-        var result0, result1;
-        var pos0;
+        let result0, result1;
+        let pos0;
 
         pos0 = pos;
         result0 = [];
@@ -121,7 +121,8 @@ module.exports = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, c) {
-            var o = [], i, current = 0;
+            const o = [];
+            let i, current = 0;
             o.push(c[0]);
             for(i = 1; i < c.length; i++) {
                 if(c[i].constructor === String && o[current].constructor === String) {
@@ -133,9 +134,9 @@ module.exports = (function(){
                 }
             }
             function select(path, obj) {
-                var splits = !path ? [] : path.split('.');
-                var curr = obj;
-                for(var i = 0; i < splits.length; i++) {
+                const splits = !path ? [] : path.split('.');
+                let curr = obj;
+                for(let i = 0; i < splits.length; i++) {
                     if(curr[splits[i]]) {
                         curr = curr[splits[i]];
                         if(i < splits.length - 1 && curr.constructor === Array && curr.length > 0) {
@@ -149,9 +150,9 @@ module.exports = (function(){
                 return curr;
             }
             function _append(str, val, encode) {
-                var j;
+                let j;
                 if(str.constructor === Array) {
-                    for(j = 0; j < str.length; j++) {
+                    for(let j = 0; j < str.length; j++) {
                         str[j] = str[j] + (encode ? encodeURIComponent(val) : val);
                     }
                 }
@@ -163,9 +164,9 @@ module.exports = (function(){
             function _format(str, values, defaults, stream) {
                 values = values || {};
                 defaults = defaults || {};
-                var i, j, val, split = false, arr, subset, key;
+                let i, j, val, split = false, arr, subset, key;
                 stream = stream || o;
-                var ele;
+                let ele;
                 for(i = 0; i < stream.length; i++) {
                     ele = stream[i];
                     if(ele.constructor === String) {
@@ -181,7 +182,7 @@ module.exports = (function(){
                         else {
                             val = select(ele.variable, values) || select(ele.variable, defaults);
                             if(val) {
-                                var encode = !ele.dontencode;
+                                const encode = !ele.dontencode;
                                 if(val.constructor == Array) {
                                     // But is the token multivalued?
                                     if(val.length === 0 && ele.required) {
@@ -215,7 +216,7 @@ module.exports = (function(){
                                                     // Split and continue.
                                                     arr = [];
                                                     subset = [];
-                                                    var start = 0, end = ele.max;
+                                                    let start = 0, end = ele.max;
 
                                                     // Remove duplicates
                                                     val = val.sort();
@@ -293,7 +294,7 @@ module.exports = (function(){
       }
 
       function parse_literal() {
-        var result0;
+        let result0;
 
         if (/^[^^ "'<>`{|}]/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
@@ -311,8 +312,8 @@ module.exports = (function(){
       }
 
       function parse_expression() {
-        var result0, result1, result2, result3;
-        var pos0, pos1;
+        let result0, result1, result2, result3;
+        let pos0, pos1;
 
         pos0 = pos;
         pos1 = pos;
@@ -364,10 +365,10 @@ module.exports = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, op, v) {
-            var token = {
+            const token = {
                 variable: v
             };
-            for(var i = 0; i < op.length; i++) {
+            for(let i = 0; i < op.length; i++) {
                 for(p in op[i]) {
                     if(op[i].hasOwnProperty(p)) {
                         token[p] = op[i][p];
@@ -384,7 +385,7 @@ module.exports = (function(){
       }
 
       function parse_operator() {
-        var result0;
+        let result0;
 
         result0 = parse_required();
         if (result0 === null) {
@@ -400,8 +401,8 @@ module.exports = (function(){
       }
 
       function parse_required() {
-        var result0;
-        var pos0;
+        let result0;
+        let pos0;
 
         pos0 = pos;
         if (input.charCodeAt(pos) === 94) {
@@ -427,8 +428,8 @@ module.exports = (function(){
       }
 
       function parse_blockMerge() {
-        var result0;
-        var pos0;
+        let result0;
+        let pos0;
 
         pos0 = pos;
         if (input.charCodeAt(pos) === 35) {
@@ -454,8 +455,8 @@ module.exports = (function(){
       }
 
       function parse_dontencode() {
-        var result0;
-        var pos0;
+        let result0;
+        let pos0;
 
         pos0 = pos;
         if (input.charCodeAt(pos) === 96) {
@@ -510,7 +511,7 @@ module.exports = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, d) {
-            var ret = {
+            const ret = {
                 multivalued: true
             }
             d = parseInt(d);
@@ -528,7 +529,7 @@ module.exports = (function(){
 
       function parse_variable() {
         var result0, result1;
-        var pos0;
+        let pos0;
 
         pos0 = pos;
         result0 = [];
@@ -539,10 +540,10 @@ module.exports = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, l) {
-            var o = [];
+            const o = [];
             o.push(l[0]);
-            var current = 0;
-            for(var i = 1; i < l.length; i++) {
+            let current = 0;
+            for(let i = 1; i < l.length; i++) {
                 if(typeof l[i] === 'string' && typeof o[current] === 'string') {
                     o[current] = o[current] + l[i];
                 }
@@ -562,7 +563,7 @@ module.exports = (function(){
 
       function parse_digits() {
         var result0, result1;
-        var pos0;
+        let pos0;
 
         pos0 = pos;
         result0 = [];
@@ -589,8 +590,8 @@ module.exports = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, d) {
-            var str = '';
-            for(var i = 0; i < d.length; i++) {
+            let str = '';
+            for(let i = 0; i < d.length; i++) {
                 str += d[i];
             }
             return str;
@@ -606,9 +607,9 @@ module.exports = (function(){
       function cleanupExpected(expected) {
         expected.sort();
 
-        var lastExpected = null;
-        var cleanExpected = [];
-        for (var i = 0; i < expected.length; i++) {
+        let lastExpected = null;
+        const cleanExpected = [];
+        for (let i = 0; i < expected.length; i++) {
           if (expected[i] !== lastExpected) {
             cleanExpected.push(expected[i]);
             lastExpected = expected[i];
@@ -625,12 +626,12 @@ module.exports = (function(){
          * enough to prevent it.
          */
 
-        var line = 1;
-        var column = 1;
-        var seenCR = false;
+        let line = 1;
+        let column = 1;
+        let seenCR = false;
 
-        for (var i = 0; i < Math.max(pos, rightmostFailuresPos); i++) {
-          var ch = input.charAt(i);
+        for (let i = 0; i < Math.max(pos, rightmostFailuresPos); i++) {
+          const ch = input.charAt(i);
           if (ch === "\n") {
             if (!seenCR) { line++; }
             column = 1;
@@ -649,7 +650,7 @@ module.exports = (function(){
       }
 
 
-      var result = parseFunctions[startRule]();
+      const result = parseFunctions[startRule]();
 
       /*
        * The parser is now in one of the following three states:
@@ -676,9 +677,9 @@ module.exports = (function(){
        * handle these states.
        */
       if (result === null || pos !== input.length) {
-        var offset = Math.max(pos, rightmostFailuresPos);
-        var found = offset < input.length ? input.charAt(offset) : null;
-        var errorPosition = computeErrorPosition();
+        const offset = Math.max(pos, rightmostFailuresPos);
+        const found = offset < input.length ? input.charAt(offset) : null;
+        const errorPosition = computeErrorPosition();
 
         throw new this.SyntaxError(
           cleanupExpected(rightmostFailuresExpected),
@@ -700,7 +701,7 @@ module.exports = (function(){
 
   result.SyntaxError = function(expected, found, offset, line, column) {
     function buildMessage(expected, found) {
-      var expectedHumanized, foundHumanized;
+      let expectedHumanized, foundHumanized;
 
       switch (expected.length) {
         case 0:

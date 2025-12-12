@@ -16,9 +16,9 @@
 
 "use strict";
 
-var _ = require('underscore'),
-    url = require('url'),
-    assert = require('assert');
+const _ = require('underscore');
+const url = require('url');
+const assert = require('assert');
 
 exports.version = require('../package.json').version;
 
@@ -30,8 +30,8 @@ exports.version = require('../package.json').version;
 module.exports = function(str) {
     assert.ok(str, 'URL is undefined');
 
-    var parsed = url.parse(str, true);
-    var that = this;
+    const parsed = url.parse(str, true);
+    const that = this;
 
     /**
      * Add a new parameter.
@@ -43,8 +43,8 @@ module.exports = function(str) {
         assert.ok(name, "name is undefined");
         assert.ok(value, "value is undefined");
 
-        var val = parsed.query[name];
-        var arr;
+        const val = parsed.query[name];
+        let arr;
         if(val) {
             if(_.isArray(val)) {
                 val.push(value);
@@ -77,8 +77,8 @@ module.exports = function(str) {
      */
     this.removeParam = function(name, value) {
         assert.ok(name, "name is undefined");
-        var index, i;
-        var val = parsed.query[name];
+        let index, i;
+        const val = parsed.query[name];
         index = -1;
         if(_.isArray(val)) {
             for(i = 0; i < val.length; i++) {

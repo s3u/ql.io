@@ -28,7 +28,7 @@ module.exports = (function(){
             + '"';
     }
 
-    var result = {
+    const result = {
         /*
          * Parses the input with a generated parser. If the parsing is successfull,
          * returns a value explicitly or implicitly specified by the grammar from
@@ -36,7 +36,7 @@ module.exports = (function(){
          * unsuccessful, throws |PEG.parser.SyntaxError| describing the error.
          */
         parse: function(input, startRule) {
-            var parseFunctions = {
+            const parseFunctions = {
                 "template": parse_template,
                 "literal": parse_literal,
                 "expression": parse_expression,
@@ -52,16 +52,16 @@ module.exports = (function(){
                 startRule = "template";
             }
 
-            var pos = { offset: 0, line: 1, column: 1, seenCR: false };
-            var reportFailures = 0;
-            var rightmostFailuresPos = { offset: 0, line: 1, column: 1, seenCR: false };
-            var rightmostFailuresExpected = [];
+            let pos = { offset: 0, line: 1, column: 1, seenCR: false };
+            let reportFailures = 0;
+            let rightmostFailuresPos = { offset: 0, line: 1, column: 1, seenCR: false };
+            let rightmostFailuresExpected = [];
 
             function padLeft(input, padding, length) {
-                var result = input;
+                let result = input;
 
-                var padLength = length - input.length;
-                for (var i = 0; i < padLength; i++) {
+                const padLength = length - input.length;
+                for (let i = 0; i < padLength; i++) {
                     result = padding + result;
                 }
 
@@ -69,9 +69,9 @@ module.exports = (function(){
             }
 
             function escape(ch) {
-                var charCode = ch.charCodeAt(0);
-                var escapeChar;
-                var length;
+                const charCode = ch.charCodeAt(0);
+                let escapeChar;
+                let length;
 
                 if (charCode <= 0xFF) {
                     escapeChar = 'x';
@@ -85,18 +85,18 @@ module.exports = (function(){
             }
 
             function clone(object) {
-                var result = {};
-                for (var key in object) {
+                const result = {};
+                for (const key in object) {
                     result[key] = object[key];
                 }
                 return result;
             }
 
             function advance(pos, n) {
-                var endOffset = pos.offset + n;
+                const endOffset = pos.offset + n;
 
-                for (var offset = pos.offset; offset < endOffset; offset++) {
-                    var ch = input.charAt(offset);
+                for (let offset = pos.offset; offset < endOffset; offset++) {
+                    const ch = input.charAt(offset);
                     if (ch === "\n") {
                         if (!pos.seenCR) { pos.line++; }
                         pos.column = 1;
@@ -128,8 +128,8 @@ module.exports = (function(){
             }
 
             function parse_template() {
-                var result0, result1;
-                var pos0;
+                let result0, result1;
+                let pos0;
 
                 pos0 = clone(pos);
                 result0 = [];
@@ -146,10 +146,10 @@ module.exports = (function(){
                 }
                 if (result0 !== null) {
                     result0 = (function(offset, line, column, c) {
-                        var o = [];
+                        const o = [];
                         o.push(c[0]);
-                        var current = 0;
-                        for(var i = 1; i < c.length; i++) {
+                        let current = 0;
+                        for(let i = 1; i < c.length; i++) {
                             if(typeof c[i] === 'string' && typeof o[current] === 'string') {
                                 o[current] = o[current] + c[i];
                             }
@@ -174,7 +174,7 @@ module.exports = (function(){
             }
 
             function parse_literal() {
-                var result0;
+                let result0;
 
                 if (/^[^`{}]/.test(input.charAt(pos.offset))) {
                     result0 = input.charAt(pos.offset);
@@ -203,8 +203,8 @@ module.exports = (function(){
             }
 
             function parse_expression() {
-                var result0, result1, result2;
-                var pos0, pos1;
+                let result0, result1, result2;
+                let pos0, pos1;
 
                 pos0 = clone(pos);
                 pos1 = clone(pos);
@@ -245,7 +245,7 @@ module.exports = (function(){
                 }
                 if (result0 !== null) {
                     result0 = (function(offset, line, column, v) {
-                        var token = {
+                        const token = {
                             variable: v,
                             str: stringify(v)
                         };
@@ -259,8 +259,8 @@ module.exports = (function(){
             }
 
             function parse_variable() {
-                var result0, result1;
-                var pos0;
+                let result0, result1;
+                let pos0;
 
                 pos0 = clone(pos);
                 result0 = [];
@@ -271,10 +271,10 @@ module.exports = (function(){
                 }
                 if (result0 !== null) {
                     result0 = (function(offset, line, column, l) {
-                        var o = [];
+                        const o = [];
                         o.push(l[0]);
-                        var current = 0;
-                        for(var i = 1; i < l.length; i++) {
+                        let current = 0;
+                        for(let i = 1; i < l.length; i++) {
                             if(typeof l[i] === 'string' && typeof o[current] === 'string') {
                                 o[current] = o[current] + l[i];
                             }
@@ -293,8 +293,8 @@ module.exports = (function(){
             }
 
             function parse_digits() {
-                var result0, result1;
-                var pos0;
+                let result0, result1;
+                let pos0;
 
                 pos0 = clone(pos);
                 result0 = [];
@@ -321,8 +321,8 @@ module.exports = (function(){
                 }
                 if (result0 !== null) {
                     result0 = (function(offset, line, column, d) {
-                        var str = '';
-                        for(var i = 0; i < d.length; i++) {
+                        let str = '';
+                        for(let i = 0; i < d.length; i++) {
                             str += d[i];
                         }
                         return str;
@@ -338,8 +338,8 @@ module.exports = (function(){
             function cleanupExpected(expected) {
                 expected.sort();
 
-                var lastExpected = null;
-                var cleanExpected = [];
+                let lastExpected = null;
+                const cleanExpected = [];
                 for (var i = 0; i < expected.length; i++) {
                     if (expected[i] !== lastExpected) {
                         cleanExpected.push(expected[i]);

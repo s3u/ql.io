@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-var strTemplate = require('./str-template.js');
+const strTemplate = require('./str-template.js');
 
 'use strict'
 
-var cache = {};
+const cache = {};
 exports.parse = function(template) {
-    var parsed = cache[template];
+    let parsed = cache[template];
     if(parsed) {
         return parsed;
     }

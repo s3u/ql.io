@@ -9,8 +9,8 @@ install:
 
 .PHONY : test
 test: install
-	node_modules/.bin/nodeunit test
+	npm test
 
 test-part:
-	node_modules/.bin/nodeunit test --reporter junit --output ../../reports
+	npm test -- --ci --reporters=default --reporters=jest-junit
 

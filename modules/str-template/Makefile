@@ -9,8 +9,10 @@ install:
 
 .PHONY : test
 test: install
-	node_modules/.bin/nodeunit test
+	npm test
 
-test-part:
-	node_modules/.bin/nodeunit test --reporter junit --output ../../reports
+test-coverage:
+	npm run test:coverage
 
+test-watch:
+	npm run test:watch
