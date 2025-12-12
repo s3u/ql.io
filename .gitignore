@@ -14,3 +14,6 @@ logs
 modernization/test-reports/
 modernization/backups/
 .nvmrc
+
+# Modern console build output
+console-ui/dist/
