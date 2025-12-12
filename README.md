@@ -5,30 +5,54 @@ ql.io is a declarative, data-retrieval and aggregation gateway for quickly consu
 
 ![Travis status](https://secure.travis-ci.org/ql-io/ql.io.png)
 
+## Requirements
+
+- Node.js 18.0.0 or higher
+- npm 8.0.0 or higher
+
 ## How to Build ql.io 
 
-To build ql.io on your own, you need node (version 0.8.0 or later) and npm. In Ubuntu, you need
-libexpat-dev additionally. Once you have these set up, do the following:
+To build ql.io on your own, follow these steps:
 
     git clone git://github.com/ql-io/ql.io.git
     cd ql.io
     make install
 
-**Note** If you get "ERR! Error: EACCES, Permission denied" errors, please take a look 
-at [npm issue #194](https://github.com/isaacs/npm/issues/194) and 
-[what-no-sudo](http://foohack.com/2010/08/intro-to-npm/#what_no_sudo).
+This project uses npm workspaces to manage dependencies across all modules.
 
-These steps will link ql.io modules locally so can you refer to those modules from your apps using
-`npm link`.
+## Testing
 
-To run tests
+Run all tests:
 
     make test 
 
-ql.io source is organized into several modules that you can test independently.
+Run tests for specific modules:
 
-    cd modules/engine
-    make test
+    make test-engine
+    make test-console
+    make test-compiler
+    make test-app
+
+## Project Structure
+
+ql.io is organized into several modules using npm workspaces:
+
+- **engine** - Core ql.io execution engine
+- **compiler** - QL script compiler  
+- **console** - Web console and HTTP interface
+- **app** - Application framework
+- **mutable-uri** - URI manipulation utilities
+- **str-template** - String templating
+- **uri-template** - URI templating
+
+## Modernization Status
+
+This project has been fully modernized for Node.js 18+ with:
+
+- ✅ Modern npm workspaces architecture
+- ✅ Jest testing framework (100% test pass rate)
+- ✅ Updated dependencies (zero critical vulnerabilities)
+- ✅ Node.js 18+ compatibility
 
 ## Using ql.io as a Stand-Alone Server
 

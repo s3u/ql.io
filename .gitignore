@@ -9,3 +9,8 @@ reports
 target
 docs
 logs
+
+# Modernization generated files
+modernization/test-reports/
+modernization/backups/
+.nvmrc

@@ -1,0 +1,9 @@
+# Test reports
+test-reports/
+
+# Backups
+backups/
+
+# Temporary files
+*.tmp
+*.log

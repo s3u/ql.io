@@ -1,0 +1,26 @@
+{
+  "env": {
+    "node": true,
+    "es2022": true,
+    "jest": true
+  },
+  "extends": ["eslint:recommended"],
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-unused-vars": "warn",
+    "no-console": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.js"],
+      "parserOptions": {
+        "sourceType": "script"
+      }
+    }
+  ]
+}

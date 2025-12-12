@@ -1,0 +1,37 @@
+{
+    "name": "ql.io",
+    "version": "0.8.11",
+    "description": "ql.io - A data retrieval and aggregation gateway",
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "workspaces": [
+        "modules/app",
+        "modules/compiler", 
+        "modules/console",
+        "modules/engine",
+        "modules/mutable-uri",
+        "modules/str-template",
+        "modules/uri-template"
+    ],
+    "scripts": {
+        "test": "npm test --workspaces",
+        "test:engine": "npm test --workspace=modules/engine",
+        "test:console": "npm test --workspace=modules/console",
+        "test:compiler": "npm test --workspace=modules/compiler",
+        "test:app": "npm test --workspace=modules/app",
+        "test:mutable-uri": "npm test --workspace=modules/mutable-uri",
+        "test:str-template": "npm test --workspace=modules/str-template",
+        "test:uri-template": "npm test --workspace=modules/uri-template",
+        "clean": "rm -rf node_modules modules/*/node_modules"
+    },
+    "devDependencies": {
+        "jest": "^29.7.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ql-io/ql.io"
+    },
+    "license": "Apache-2.0",
+    "keywords": ["ql", "query", "data", "aggregation", "gateway", "api"]
+}

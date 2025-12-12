@@ -1,36 +1,43 @@
-MODULES	= modules/uri-template modules/str-template modules/mutable-uri modules/compiler modules/engine \
-          modules/console modules/app modules/mem-cache-local
-
-DIRS	= $(MODULES)
- 
-UNAME := $(shell uname -s)
-
-all: clean install test
+all: clean install 
 
 clean:
-	-for d in $(DIRS); do (cd $$d; $(MAKE) clean ); done
+	-rm -fr node_modules
+	-rm -fr modules/*/node_modules
+	-rm -fr logs
+	-rm -fr pids
 
 install:
-	-for d in $(DIRS); do (cd $$d; $(MAKE) install ); done
+	-mkdir -p pids logs tables routes
+	npm install --workspaces
 
-.PHONY : test
 test:
-	-rm -rf reports 
-	mkdir -p test
-	-for d in $(DIRS); do \
-		cd $$d; \
-		$(MAKE) test || exit;\
-		cd ../..;\
-	done
+	npm run test:app
+	npm run test:compiler
+	npm run test:console
+	npm run test:engine
+	npm run test:mutable-uri
+	npm run test:str-template
+	npm run test:uri-template
 
-test-part:
-	-rm -rf reports 
-	mkdir -p test
-	-for d in $(DIRS); do (cd $$d; $(MAKE) test-part ); done
+test-engine:
+	npm run test:engine
 
-publish:
-	-for d in $(MODULES); do (cd $$d; $(MAKE) publish); done
+test-console:
+	npm run test:console
 
-unpublish:
-	-for d in $(MODULES); do (cd $$d; $(MAKE) unpublish); done
+test-compiler:
+	npm run test:compiler
 
+test-app:
+	npm run test:app
+
+test-mutable-uri:
+	npm run test:mutable-uri
+
+test-str-template:
+	npm run test:str-template
+
+test-uri-template:
+	npm run test:uri-template
+
+.PHONY: all clean install test test-engine test-console test-compiler test-app test-mutable-uri test-str-template test-uri-template

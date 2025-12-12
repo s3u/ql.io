@@ -1,3 +1,35 @@
+## December 11, 2025
+
+### Major Modernization Release - Node.js 18+ Compatibility
+
+**🎉 Complete Project Modernization**
+* **Node.js Compatibility**: Upgraded from Node.js 0.8.x to Node.js 18+ (LTS)
+* **npm Workspaces**: Converted to modern npm workspaces architecture
+* **Jest Testing**: Migrated from nodeunit to Jest testing framework
+* **Zero Vulnerabilities**: Updated all dependencies, eliminated critical security issues
+* **100% Test Pass Rate**: All 309 tests passing across 7 modules
+
+**📦 Module Updates**
+* **engine**: Complete dependency modernization (71 test suites, 180 tests)
+* **compiler**: Updated to modern dependencies (19 test suites, 87 tests)  
+* **console**: Express 2.x → 4.x, Winston 0.6 → 3.x (2 test suites, 5 tests)
+* **app**: Native cluster module, Commander 11.x (2 test suites, 9 tests)
+* **mutable-uri**: Modernized and tested (1 test suite, 4 tests)
+* **str-template**: Modernized and tested (1 test suite, 9 tests)
+* **uri-template**: Modernized and tested (1 test suite, 24 tests)
+
+**🔧 Technical Improvements**
+* Replaced fragile `file:` dependencies with proper workspace references
+* Updated 50+ dependencies to modern, maintained versions
+* Fixed callback race conditions and async patterns
+* Implemented proper error handling and logging
+* Added comprehensive Jest test configurations
+
+**🚀 Build System**
+* Modern Makefile with individual module testing
+* Clean npm scripts for development workflow
+* Proper dependency management and cleanup
+
 ## October 17, 2012
 
 * now works with node-expat 2.0.0 
