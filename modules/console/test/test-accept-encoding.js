@@ -35,7 +35,7 @@ var cpu_load =  os.cpus().length /2;
 module.exports = {
     //Happy case for deflate
     'deflate' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -51,7 +51,7 @@ module.exports = {
             var req = http.request(options, function(res) {
                 if(os.loadavg()[1] > cpu_load) {
                     test.ok(! res.headers['content-encoding'] || res.headers['content-encoding'] === 'identity');
-                    app.close();
+                    c.close();
                     test.done();
                     return;
                 }
@@ -70,12 +70,12 @@ module.exports = {
                         str += buf.toString(encoding);
                     });
                     test.ok(str.length > 0);
-                    app.close();
+                    c.close();
                     test.done();
                 });
                 unzip.on('error', function (err) {
                     test.ok(false, 'Decompression failed.' + err);
-                    app.close();
+                    c.close();
                     test.done();
                 });
 
@@ -92,7 +92,7 @@ module.exports = {
     },
     // Happy case for gzip
     'gzip' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -108,7 +108,7 @@ module.exports = {
             var req = http.request(options, function(res) {
                 if(os.loadavg()[1] > cpu_load) {
                     test.ok(! res.headers['content-encoding'] || res.headers['content-encoding'] === 'identity');
-                    app.close();
+                    c.close();
                     test.done();
                     return;
                 }                test.ok(res.headers['content-encoding'] === 'gzip');
@@ -125,12 +125,12 @@ module.exports = {
                         str += buf.toString(encoding);
                     });
                     test.ok(str.length > 0);
-                    app.close();
+                    c.close();
                     test.done();
                 });
                 unzip.on('error', function (err) {
                     test.ok(false, "Decompression failed. " + err);
-                    app.close();
+                    c.close();
                     test.done();
                 });
 
@@ -146,7 +146,7 @@ module.exports = {
         });
     },
     'gzip-deflate' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -162,19 +162,19 @@ module.exports = {
             var req = http.request(options, function(res) {
                 if(os.loadavg()[1] > cpu_load) {
                     test.ok(! res.headers['content-encoding'] || res.headers['content-encoding'] === 'identity');
-                    app.close();
+                    c.close();
                     test.done();
                     return;
                 }
                 test.ok(res.headers['content-encoding'] === 'gzip',  '\'gzip\' content encoding expected');
-                app.close();
+                c.close();
                 test.done();
             });
             req.end();
         });
     },
     'gzip-deflate-with-q' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -190,12 +190,12 @@ module.exports = {
             var req = http.request(options, function(res) {
                 if(os.loadavg()[1] > cpu_load) {
                     test.ok(! res.headers['content-encoding'] || res.headers['content-encoding'] === 'identity');
-                    app.close();
+                    c.close();
                     test.done();
                     return;
                 }
                 test.ok(res.headers['content-encoding'] === 'deflate', '\'deflate\' content encoding expected');
-                app.close();
+                c.close();
                 test.done();
             });
             req.end();
@@ -203,7 +203,7 @@ module.exports = {
     },
     // Accept - Encoding as empty
     'empty-accept-encoding' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -219,14 +219,14 @@ module.exports = {
             var req = http.request(options, function(res) {
                 test.ok(!res.headers['content-encoding'], "Content should not be encoded");
                 test.ok(!res.headers['vary'], "Vary header must not present for uncompressed responses");
-                app.close();
+                c.close();
                 test.done();
             });
             req.end();
         });
     },
     'identity-accept-encoding' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -242,14 +242,14 @@ module.exports = {
             var req = http.request(options, function(res) {
                 test.ok(!res.headers['content-encoding'], "Content should not be encoded");
                 test.ok(!res.headers['vary'], "Vary header must not present for uncompressed responses");
-                app.close();
+                c.close();
                 test.done();
             });
             req.end();
         });
     },
     'identity-with-q' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -265,7 +265,7 @@ module.exports = {
             var req = http.request(options, function(res) {
                 test.ok(!res.headers['content-encoding'], "Content should not be encoded");
                 test.ok(!res.headers['vary'], "Vary header must not present for uncompressed responses");
-                app.close();
+                c.close();
                 test.done();
             });
             req.end();
@@ -273,7 +273,7 @@ module.exports = {
     },
     // *;q=0 means identity
     'q-accept-encoding' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -288,7 +288,7 @@ module.exports = {
             };
             var req = http.request(options, function(res) {
                 test.ok(!res.headers['content-encoding'], "Content should not be encoded");
-                app.close();
+                c.close();
                 test.done();
             });
             req.end();
@@ -296,7 +296,7 @@ module.exports = {
     },
     // *;q=1 - default to gzip
     'q-1-*-accept-encoding' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -312,12 +312,12 @@ module.exports = {
             var req = http.request(options, function(res) {
                 if(os.loadavg()[1] > cpu_load) {
                     test.ok(! res.headers['content-encoding'] || res.headers['content-encoding'] === 'identity');
-                    app.close();
+                    c.close();
                     test.done();
                     return;
                 }
                 test.ok(res.headers['content-encoding'] === 'gzip', "gzip content expected");
-                app.close();
+                c.close();
                 test.done();
             });
             req.end();
@@ -326,7 +326,7 @@ module.exports = {
     // unsupported accept encoding. ql.io doesn't throw 406,
     // instead serves identity response.
     'sdch-test' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -341,14 +341,14 @@ module.exports = {
             };
             var req = http.request(options, function(res) {
                 test.ok(!res.headers['content-encoding'], "Content should not be encoded");
-                app.close();
+                c.close();
                 test.done();
             });
             req.end();
         });
     },
     'invalid-accept-encoding-test' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -363,11 +363,11 @@ module.exports = {
             };
             var req = http.request(options, function(res) {
                 test.ok(!res.headers['content-encoding'], "Content should not be encoded");
-                app.close();
+                c.close();
                 test.done();
             });
             req.on('error', function() {
-                app.close();
+                c.close();
                 test.done();
             })
             req.end();
@@ -375,7 +375,7 @@ module.exports = {
     },
     // No accept-encoding header.
     'null-accept-encoding' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -389,7 +389,7 @@ module.exports = {
             };
             var req = http.request(options, function(res) {
                 test.ok(!res.headers['content-encoding'], "Content should not be encoded");
-                app.close();
+                c.close();
                 test.done();
             });
             req.end();
@@ -397,7 +397,7 @@ module.exports = {
     },
     // non existent route
     'invalid-route' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -414,7 +414,7 @@ module.exports = {
             var req = http.request(options, function (res) {
                 if(os.loadavg()[1] > cpu_load) {
                     test.ok(! res.headers['content-encoding'] || res.headers['content-encoding'] === 'identity');
-                    app.close();
+                    c.close();
                     test.done();
                     return;
                 }
@@ -433,12 +433,12 @@ module.exports = {
                         str += buf.toString(encoding);
                     });
                     test.ok(str.length > 0);
-                    app.close();
+                    c.close();
                     test.done();
                 });
                 unzip.on('error', function (err) {
                     test.ok(false, 'Decompression failed.' + err);
-                    app.close();
+                    c.close();
                     test.done();
                 });
 
@@ -455,7 +455,7 @@ module.exports = {
     },
     // route
     'api-json' : function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -471,7 +471,7 @@ module.exports = {
             var req = http.request(options, function(res) {
                 if(os.loadavg()[1] > cpu_load) {
                     test.ok(! res.headers['content-encoding'] || res.headers['content-encoding'] === 'identity');
-                    app.close();
+                    c.close();
                     test.done();
                     return;
                 }
@@ -489,12 +489,12 @@ module.exports = {
                         str += buf.toString(encoding);
                     });
                     test.ok(str.length > 0);
-                    app.close();
+                    c.close();
                     test.done();
                 });
                 unzip.on('error', function (err) {
                     test.ok(false, "Decompression failed. " + err);
-                    app.close();
+                    c.close();
                     test.done();
                 });
 

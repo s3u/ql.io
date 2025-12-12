@@ -37,7 +37,7 @@ module.exports = {
             res.end();
         });
         server.listen(3000, function () {
-            app.listen(4000, function () {
+            c.listen(4000, function () {
                 var script = 'create table quirky.json on select get from "http://localhost:3000"; return select * from quirky.json';
                 var options = {
                     host: 'localhost',
@@ -60,7 +60,7 @@ module.exports = {
                     res.on('end', function () {
                         var json = JSON.parse(data);
                         test.deepEqual(json, { "HELLO": "WORLD"});
-                        app.close();
+                        c.close();
                         server.close();
                         test.done();
                     });

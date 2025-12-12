@@ -40,7 +40,7 @@ module.exports = {
                     });
 
                     part.on('end', function() {
-                        var buf = new Buffer(size), i = 0, idx = 0;
+                        var buf = Buffer.alloc(size), i = 0, idx = 0;
                         while (i < chunks.length) {
                             idx = idx + chunks[i++].copy(buf, idx);
                         }
@@ -80,9 +80,9 @@ module.exports = {
         });
 
         var app = c.app;
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var form = new FormData();
-            form.append('body', new Buffer('<test>Test Body</test>'));
+            form.append('body', Buffer.from('<test>Test Body</test>'));
 
             var dir = __dirname + '/images/';
             // var files = [ 'logoEbay_x45.gif', 'ebay_closeup.jpeg', 'ql.io.jpg' ];
@@ -102,7 +102,7 @@ module.exports = {
                 headers: _.extend({
                     host: 'localhost',
                     connection: 'close'
-                }, form.getHeaders())
+                }, form.getHeaders ? form.getHeaders() : form.getCustomHeaders())
             };
 
             var request = http.request(options);
@@ -122,7 +122,7 @@ module.exports = {
                     test.equals(r.parts[1], 'logoEbay_x45.gif');
                     test.equals(r.parts[2], 'ebay_closeup.jpeg');
                     test.equals(response.statusCode, 200);
-                    app.close();
+                    c.close();
                     upload_server.close();
                     test.done();
                 });

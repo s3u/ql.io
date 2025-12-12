@@ -33,7 +33,7 @@ module.exports = testCase({
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
+        c.c.listen(3000, function() {
             // Ready to run tests now.
             testRunner('showa tables', test, {
                 ack : 1,
@@ -55,7 +55,7 @@ module.exports = testCase({
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
+        c.c.listen(3000, function() {
             testRunner('show tables', test, {
                 ack : 1,
                 compileError : 0,
@@ -76,7 +76,7 @@ module.exports = testCase({
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
+        c.c.listen(3000, function() {
             testRunner('desc foo', test, {
                 ack : 1,
                 compileError : 0,
@@ -97,7 +97,7 @@ module.exports = testCase({
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
+        c.c.listen(3000, function() {
             testRunner('select * from finditems where keywords = "ipad"', test, {
                 ack : 1,
                 compileError : 0,
@@ -118,7 +118,7 @@ module.exports = testCase({
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
+        c.c.listen(3000, function() {
             var script = 'data = {\
                            "name" : {\
                                "first" : "Hello",\
@@ -156,7 +156,7 @@ module.exports = testCase({
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
+        c.c.listen(3000, function() {
             var script = "select p.Title, ps.inventoryCountResponse.totalCount from ebay.shopping.products as p, ebay.shopping.productstats as ps where p.QueryKeywords = 'iPhone' and p.siteid = '0' and ps.productID = p.ProductID[0].Value";
             testRunner(script, test, {
                 ack : 1,
@@ -173,7 +173,7 @@ module.exports = testCase({
 
     'create table error': function (test) {
         var c = new Console();
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var script = 'create table foo on insert post to "foo" using bodyTemplate "foo.xml.mu" type "application/xml"';
             testRunner(script, test, {
                 ack: 1,
@@ -192,7 +192,7 @@ module.exports = testCase({
         var c = new Console();
         var emitter = new EventEmitter();
         var conn;
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var script = 'foo  = {"a" : "b" }'+
                 'bar  = {"c":"d"}'+
                 'f = select * from foo;'+
@@ -229,7 +229,7 @@ module.exports = testCase({
             emitter.on(Engine.Events.SCRIPT_RESULT, function(data) {
                 test.ok(f === 1);
                 test.ok(b === 1);
-                c.app.close();
+                c.c.close();
                 conn.close();
                 test.done();
             });
@@ -272,7 +272,7 @@ function testRunner(script, test, obj, app) {
         test.equals(obj.request, request);
         test.equals(obj.response, response);
         test.equals(obj.done, done);
-        app.close();
+        c.close();
         connection.close();
         test.done();
     });

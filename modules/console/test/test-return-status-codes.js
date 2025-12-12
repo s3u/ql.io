@@ -31,7 +31,7 @@ module.exports = {
         });
 
         var app = c.app;
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -44,14 +44,14 @@ module.exports = {
             };
             var req = http.request(options, function(res) {
                 test.ok(res.statusCode === 502);
-                app.close();
+                c.close();
                 test.done();
             });
 
             req.on('error', function(err) {
                 console.log(err);
                 test.ok(false);
-                app.close();
+                c.close();
                 test.done();
 
             });

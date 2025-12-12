@@ -30,7 +30,7 @@ module.exports = {
 
         var app = c.app;
 
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -51,7 +51,7 @@ module.exports = {
                 })
                 res.on('end', function() {
                     test.ok(data.indexOf('127.0.0.1') >= 0);
-                    app.close();
+                    c.close();
                     test.done();
                 });
             });
@@ -84,7 +84,7 @@ module.exports = {
             var app = c.app;
 
             // Start the console
-            app.listen(4000, function () {
+            c.listen(4000, function () {
                 var options = {
                     host: 'localhost',
                     port: 4000,
@@ -106,7 +106,7 @@ module.exports = {
                     res.on('end', function () {
                         data = JSON.parse(data);
                         test.equals(data.remoteAddress, '127.0.0.1');
-                        app.close();
+                        c.close();
                         server.close();
                         test.done();
                     });

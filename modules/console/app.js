@@ -16,18 +16,19 @@
 
 'use strict';
 
-var winston = require('winston'),
+const winston = require('winston'),
     express = require('express'),
+    http = require('http'),
+    bodyParser = require('body-parser'),
+    multer = require('multer'),
     browserify = require('browserify'),
     headers = require('headers'),
     fs = require('fs'),
     os = require('os'),
     util = require('util'),
-    sanitize = require('validator').sanitize,
-    connect = require('connect'),
-    expat = require('xml2json'),
-    assetManager = require('connect-assetmanager'),
-    assetHandler = require('connect-assetmanager-handlers'),
+    validator = require('validator'),
+    { XMLParser } = require('fast-xml-parser'),
+    path = require('path'),
     Engine = require('ql.io-engine'),
     MutableURI = require('ql.io-mutable-uri'),
     _ = require('underscore'),
@@ -38,176 +39,166 @@ var winston = require('winston'),
 
 exports.version = require('./package.json').version;
 
-process.on('uncaughtException', function(error) {
-    winston.error(error.stack);
+// Create Winston logger instance
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.errors({ stack: true }),
+        winston.format.json()
+    ),
+    transports: [
+        new winston.transports.Console({
+            format: winston.format.simple()
+        })
+    ]
 });
 
-var skipHeaders = ['connection', 'host', 'referer', 'content-length', 'accept', 'accept-charset',
+process.on('uncaughtException', function(error) {
+    logger.error(error.stack);
+});
+
+const skipHeaders = ['connection', 'host', 'referer', 'content-length', 'accept', 'accept-charset',
     'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers',
     'transfer-encoding', 'upgrade'];
 
-var Console = module.exports = function(opts, cb) {
+const Console = module.exports = function(opts, cb) {
 
     opts = opts || {};
 
-    var cache = opts.cache = cacheUtil.startCache(opts.config);
+    const cache = opts.cache = cacheUtil.startCache(opts.config);
 
-    var engine = new Engine(opts);
+    const engine = new Engine(opts);
 
-    var app = this.app = express.createServer();
+    const app = this.app = express();
+    const server = this.server = http.createServer(app);
 
     // Monitor App to provide VI page, markup/markdown feature.
-    var monApp = this.monApp = express.createServer();
+    const monApp = this.monApp = express();
+    const monServer = this.monServer = http.createServer(monApp);
 
     // Remains true until the app receives a 'close' event. Once this event is received, the app
     // sends 'connection: close' on responses (except for express served responses) and ends
     // the connection. See the app.on('close') handler below.
-    var serving;
-    app.on('listening', function() {
+    let serving;
+    server.on('listening', function() {
         serving = true;
     });
 
     app.enable('case sensitive routes'); // Default routes are not case sensitive
 
-    // Add parser for xml
-    connect.bodyParser.parse['application/xml'] = function(req, options, next) {
-        var buf = '';
-        req.setEncoding('utf8');
-        req.on('data', function (chunk) {
-            buf += chunk
-        });
-        req.on('end', function () {
-            try {
-                req.body = expat.toJson(buf, {coerce: true, object: true});
-                next();
-            }
-            catch(err) {
-                next(err);
-            }
-        });
-    };
+    // Create XML parser instance
+    const xmlParser = new XMLParser({
+        ignoreAttributes: false,
+        parseAttributeValue: true,
+        parseNodeValue: true
+    });
 
-    connect.bodyParser.parse['opaque'] = function(req, options, next) {
-        var buf = '';
-        req.setEncoding('utf8');
-        req.on('data', function (chunk) {
-            buf += chunk
-        });
-        req.on('end', function () {
-            try {
-                req.body = buf;
-                next();
-            }
-            catch(err) {
-                next(err);
-            }
-        });
-    };
-
-    // Add parser for multipart
-    var multiParser = function(req, options, next) {
-        var form = new formidable.IncomingForm(), parts = [];
-
-
-        form.onPart = function(part) {
-            var chunks = [], idx = 0, size = 0;
-
-            part.on('data', function(c) {
-                chunks[idx++] = c;
-                size += c.length;
+    // Custom middleware for XML parsing
+    const xmlBodyParser = function(req, res, next) {
+        if (req.get('content-type') === 'application/xml') {
+            let buf = '';
+            req.setEncoding('utf8');
+            req.on('data', function (chunk) {
+                buf += chunk;
             });
-
-            part.on('end', function() {
-                var buf = new Buffer(size), i = 0, idx = 0;
-                while (i < chunks.length) {
-                    idx = idx + chunks[i++].copy(buf, idx);
+            req.on('end', function () {
+                try {
+                    req.body = xmlParser.parse(buf);
+                    next();
                 }
-                var p = { 'name' : part.name, 'size' : idx, 'data' : buf };
-                parts.push(p);
+                catch(err) {
+                    next(err);
+                }
             });
-
-            part.on('error', function(err) {
-                next(err);
-            });
+        } else {
+            next();
         }
-
-        form.parse(req, function(err, fields, files) {
-            req.body = parts.splice(0, 1); // by our convention the first part is the body
-            req.parts = parts;
-            if (err) {
-                next(err);
-            } else {
-                next();
-            }
-        });
     };
 
-    // Add parser for multipart requests
-    connect.bodyParser.parse['multipart/form-data'] = multiParser;
-    connect.bodyParser.parse['multipart/related'] = multiParser;
-    connect.bodyParser.parse['multipart/mixed'] = multiParser;
+    // Custom middleware for opaque body parsing
+    const opaqueBodyParser = function(req, res, next) {
+        if (req.get('content-type') === 'opaque') {
+            let buf = '';
+            req.setEncoding('utf8');
+            req.on('data', function (chunk) {
+                buf += chunk;
+            });
+            req.on('end', function () {
+                try {
+                    req.body = buf;
+                    next();
+                }
+                catch(err) {
+                    next(err);
+                }
+            });
+        } else {
+            next();
+        }
+    };
 
-    var bodyParser = connect.bodyParser();
-    app.use(bodyParser); // parses the body for application/x-www-form-urlencoded and application/json
-    var respHeaders = require(__dirname + '/lib/middleware/resp-headers');
+    // Custom multipart parser middleware using formidable
+    const multipartParser = function(req, res, next) {
+        const contentType = req.get('content-type') || '';
+        if (contentType.indexOf('multipart/') === 0) {
+            const form = new formidable.IncomingForm(), parts = [];
+
+            form.onPart = function(part) {
+                const chunks = [];
+                let idx = 0, size = 0;
+
+                part.on('data', function(c) {
+                    chunks[idx++] = c;
+                    size += c.length;
+                });
+
+                part.on('end', function() {
+                    const buf = Buffer.alloc(size);
+                    let i = 0, idx = 0;
+                    while (i < chunks.length) {
+                        idx = idx + chunks[i++].copy(buf, idx);
+                    }
+                    const p = { 'name' : part.name, 'size' : idx, 'data' : buf };
+                    parts.push(p);
+                });
+
+                part.on('error', function(err) {
+                    next(err);
+                });
+            };
+
+            form.parse(req, function(err, fields, files) {
+                req.body = parts.splice(0, 1); // by our convention the first part is the body
+                req.parts = parts;
+                if (err) {
+                    next(err);
+                } else {
+                    next();
+                }
+            });
+        } else {
+            next();
+        }
+    };
+
+    // Setup body parsing middleware
+    app.use(bodyParser.json());
+    app.use(bodyParser.urlencoded({ extended: true }));
+    app.use(xmlBodyParser);
+    app.use(opaqueBodyParser);
+    app.use(multipartParser);
+    const respHeaders = require(__dirname + '/lib/middleware/resp-headers');
     app.use(respHeaders());
     if(opts['enable console']) {
-        // If you want unminified JS and CSS, jus add property debug: true to js and css vars below.
-        var qlAssets = {
-            'js': {
-                'stale': true, // If set to false, this adds a watch file listener - which messes up shutdown via cluster.
-                'route': /\/scripts\/all.js/,
-                'path': __dirname + '/public/scripts/',
-                'dataType': 'javascript',
-                'files': [
-                    'splitter.js',
-                    'codemirror.js',
-                    'qlio-editor.js',
-                    'jquery.treeview.js',
-                    'jsonview.js',
-                    'mustache.js',
-                    'har-viewer.js',
-                    'console.js'
-                ]
-            },
-            'css': {
-                'stale': true, // If set to false, this adds a watch file listener - which messes up shutdown via cluster.
-                'route': /\/css\/all.css/,
-                'path': __dirname + '/public/css/',
-                'dataType': 'css',
-                'files': [
-                    'console.css',
-                    'codemirror.css',
-                    'qlio-editor.css',
-                    'treeview.css',
-                    'har-viewer.css',
-                    'jquery-ui.css',
-                    'api.css'
-                ],
-                'preManipulate': {
-                    // Regexp to match user-agents including MSIE.
-                    'MSIE': [
-                        assetHandler.yuiCssOptimize,
-                        assetHandler.fixVendorPrefixes,
-                        assetHandler.fixGradients,
-                        assetHandler.stripDataUrlsPrefix
-                    ],
-                    // Matches all (regex start line)
-                    '^': [
-                        assetHandler.yuiCssOptimize,
-                        assetHandler.fixVendorPrefixes,
-                        assetHandler.fixGradients
-                    ]
-                }
-            }
-        };
-        var qlAssetLoader = assetManager(qlAssets);
-        app.use(qlAssetLoader);
+        // Serve static assets directly with Express (more secure than connect-assetmanager)
+        app.use('/scripts', express.static(path.join(__dirname, 'public/scripts')));
+        app.use('/css', express.static(path.join(__dirname, 'public/css')));
 
         app.set('views', __dirname + '/public/views');
         app.use(express.static(__dirname + '/public'));
         app.set('view engine', 'html');
-        app.register('.html', require('ejs'));
+        app.engine('html', require('ejs').renderFile);
 
         // The require below has paths prepended so that they can be loaded relative to this
         // (console) module and not its dependents. If not, Node would look for those modules
@@ -225,7 +216,7 @@ var Console = module.exports = function(opts, cb) {
             res.render(__dirname + '/public/views/console/index.ejs', {
                 title: 'ql.io',
                 layout: 'console-layout',
-                script: req.param('s') || '-- Type ql script here - all keywords must be in lower case'
+                script: req.query.s || '-- Type ql script here - all keywords must be in lower case'
             });
         });
 
@@ -236,12 +227,14 @@ var Console = module.exports = function(opts, cb) {
     }
 
     // register routes
-    var routes = engine.routes.verbMap;
+    const routes = engine.routes.verbMap;
     _.each(routes, function(verbRoutes, uri) {
         _.each(verbRoutes, function(verbRouteVariants, verb) {
             engine.emit(Engine.Events.EVENT, {}, 'Adding route ' + uri + ' for ' + verb);
-            app[verb](uri, function(req, res) {
-                var holder = {
+            // Map 'del' to 'delete' for Express 4.x compatibility
+            const expressVerb = verb === 'del' ? 'delete' : verb;
+            app[expressVerb](uri, function(req, res) {
+                const holder = {
                     params: {},
                     headers: {},
                     parts: {},
@@ -256,11 +249,11 @@ var Console = module.exports = function(opts, cb) {
 
                 // find a route (i.e. associated cooked script)
                 // routes that distinguish required and optional params
-                var route = _(verbRouteVariants).chain()
-                    .filter(function (verbRouteVariant){var defaultKeys = _.chain(verbRouteVariant.query)
+                const route = _(verbRouteVariants).chain()
+                    .filter(function (verbRouteVariant){const defaultKeys = _.chain(verbRouteVariant.query)
                             .keys()
                             .filter(function(k){
-                                var querykey = verbRouteVariant.query[k];
+                                let querykey = verbRouteVariant.query[k];
                                 if (querykey.indexOf('^') != -1) {
                                     querykey = querykey.substr(1);
                                 }
@@ -268,8 +261,8 @@ var Console = module.exports = function(opts, cb) {
                             })
                             .value();
                         // missed query params that are neither defaults nor user provided
-                        var missed = _.difference(_.keys(verbRouteVariant.query), _.union(defaultKeys, _.keys(holder.params)));
-                        var misrequired = _.filter(missed, function(key){
+                        const missed = _.difference(_.keys(verbRouteVariant.query), _.union(defaultKeys, _.keys(holder.params)));
+                        const misrequired = _.filter(missed, function(key){
                             if (verbRouteVariant.routeInfo.optparam){
                                 // if with optional params, find if any required param is missed
                                 return verbRouteVariant.query[key] && verbRouteVariant.query[key].indexOf("^") == 0;
@@ -286,8 +279,8 @@ var Console = module.exports = function(opts, cb) {
                             return 0;
                         }
                         // with optional param
-                        var matchCount = _.intersection(_.keys(holder.params), _.keys(verbRouteVariant.query)).length;
-                        var requiredCount = _.filter(_.keys(verbRouteVariant.query), function(key){
+                        const matchCount = _.intersection(_.keys(holder.params), _.keys(verbRouteVariant.query)).length;
+                        const requiredCount = _.filter(_.keys(verbRouteVariant.query), function(key){
                             return verbRouteVariant[key] && verbRouteVariant[key].indexOf("^") == 0;
                         }).length;
                         return matchCount - requiredCount;
@@ -312,7 +305,7 @@ var Console = module.exports = function(opts, cb) {
                     }
                     holder.routeParams[queryParam] = defaultValue;
                 });
-                var keys = _.keys(req.params);
+                const keys = _.keys(req.params);
                 _.each(keys, function(key) {
                     holder.routeParams[key] = req.params[key];
                 });
@@ -338,7 +331,7 @@ var Console = module.exports = function(opts, cb) {
                 holder.parts = req.parts;
 
                 // Start the top level event
-                var urlEvent = engine.beginEvent({
+                const urlEvent = engine.beginEvent({
                     clazz: 'info',
                     type: 'route',
                     name: route.routeInfo.method.toUpperCase() + ' ' + route.routeInfo.path.value,
@@ -353,7 +346,7 @@ var Console = module.exports = function(opts, cb) {
                     }
                 });
 
-                var execState = [];
+                let execState = [];
                 engine.execute(route.script,
                     {
                         request: holder,
@@ -362,7 +355,7 @@ var Console = module.exports = function(opts, cb) {
                         parentEvent: urlEvent.event
                     },
                     function(emitter) {
-                        setupExecStateEmitter(emitter, execState, req.param('events'));
+                        setupExecStateEmitter(emitter, execState, req.query.events);
                         setupCounters(emitter);
                         emitter.on('end', urlEvent.cb);
                     }
@@ -373,12 +366,12 @@ var Console = module.exports = function(opts, cb) {
 
     // HTTP indirection for 'show tables' command
     app.get('/tables', function(req,res){
-        var holder = {
+        const holder = {
             headers: {}
         };
 
-        var isJson = ((req.headers || {}).accept || '').search('json') > 0 ||
-            (req.param('format') || '').trim().toLowerCase() === 'json';
+        const isJson = ((req.headers || {}).accept || '').search('json') > 0 ||
+            (req.query.format || '').trim().toLowerCase() === 'json';
 
         function routePage(res, execState, results){
             res.header['Link'] = headers.format('Link', {
@@ -393,7 +386,7 @@ var Console = module.exports = function(opts, cb) {
         }
 
         // Start the top level event
-        var urlEvent = engine.beginEvent({
+        const urlEvent = engine.beginEvent({
             clazz: 'info',
             type: 'route',
             name: req.method.toUpperCase() + ' ' + req.url,
@@ -410,14 +403,14 @@ var Console = module.exports = function(opts, cb) {
             }
         });
 
-        var execState = [];
+        const execState = [];
         engine.execute('show tables',
             {
                 request: holder,
                 parentEvent: urlEvent.event
             },
             function(emitter) {
-                setupExecStateEmitter(emitter, execState, req.param('events'));
+                setupExecStateEmitter(emitter, execState, req.query.events);
                 setupCounters(emitter);
                 emitter.on('end', urlEvent.cb);
             }
@@ -426,12 +419,12 @@ var Console = module.exports = function(opts, cb) {
 
     // HTTP indirection for 'describe <table>' command  and it returns json (and not html)
     app.get('/table', function(req,res){
-        var holder = {
+        const holder = {
             headers: {}
         };
 
-        var isJson = ((req.headers || {}).accept || '').search('json') > 0 ||
-            (req.param('format') || '').trim().toLowerCase() === 'json';
+        const isJson = ((req.headers || {}).accept || '').search('json') > 0 ||
+            (req.query.format || '').trim().toLowerCase() === 'json';
 
         function routePage(res, execState, result){
             res.header['Link'] = headers.format('Link', {
@@ -445,7 +438,7 @@ var Console = module.exports = function(opts, cb) {
                 routes:
                     _(result.routes).chain()
                         .map(function(route){
-                            var parse = new MutableURI(route);
+                            const parse = new MutableURI(route);
                             return {
                                 method: parse.getParam('method'),
                                 path: parse.getParam('path'),
@@ -456,7 +449,7 @@ var Console = module.exports = function(opts, cb) {
             });
         }
 
-        var name = req.param('name');
+        const name = req.query.name;
 
         if (!name) {
             res.writeHead(400, 'Bad input', {
@@ -470,7 +463,7 @@ var Console = module.exports = function(opts, cb) {
         }
 
         // Start the top level event
-        var urlEvent = engine.beginEvent({
+        const urlEvent = engine.beginEvent({
             clazz: 'info',
             type: 'route',
             name: req.method.toUpperCase() + ' ' + req.url,
@@ -487,14 +480,14 @@ var Console = module.exports = function(opts, cb) {
             }
         });
 
-        var execState = [];
+        const execState = [];
         engine.execute('describe' + decodeURIComponent(name),
             {
                 request: holder,
                 parentEvent: urlEvent.event
             },
             function(emitter) {
-                setupExecStateEmitter(emitter, execState, req.param('events'));
+                setupExecStateEmitter(emitter, execState, req.query.events);
                 setupCounters(emitter);
                 emitter.on('end', urlEvent.cb);
             }
@@ -503,13 +496,13 @@ var Console = module.exports = function(opts, cb) {
 
     // HTTP indirection for 'show routes' command
     app.get('/api', function(req,res){
-        var holder = {
+        const holder = {
             params: {},
             headers: {}
         };
 
-        var isJson = ((req.headers || {}).accept || '').search('json') > 0 ||
-            (req.param('format') || '').trim().toLowerCase() === 'json';
+        const isJson = ((req.headers || {}).accept || '').search('json') > 0 ||
+            (req.query.format || '').trim().toLowerCase() === 'json';
 
         function routePage(res, execState, results){
             res.header['Link'] = headers.format('Link', {
@@ -524,7 +517,7 @@ var Console = module.exports = function(opts, cb) {
         }
 
         // Start the top level event
-        var urlEvent = engine.beginEvent({
+        const urlEvent = engine.beginEvent({
             clazz: 'info',
             type: 'route',
             name: req.method.toUpperCase() + ' ' + req.url,
@@ -541,14 +534,14 @@ var Console = module.exports = function(opts, cb) {
             }
         });
 
-        var execState = [];
+        const execState = [];
         engine.execute('show routes',
             {
                 request: holder,
                 parentEvent: urlEvent.event
             },
             function(emitter) {
-                setupExecStateEmitter(emitter, execState, req.param('events'));
+                setupExecStateEmitter(emitter, execState, req.query.events);
                 setupCounters(emitter);
                 emitter.on('end', urlEvent.cb);
             }
@@ -557,12 +550,12 @@ var Console = module.exports = function(opts, cb) {
 
     // HTTP indirection for 'describe route "<route>" using method <http-verb>' command
     app.get('/route', function(req,res){
-        var holder = {
+        const holder = {
             params: {},
             headers: {}
         };
-        var path = req.param('path');
-        var method = req.param('method');
+        const path = req.query.path;
+        const method = req.query.method;
 
         if (!path || !method) {
             res.writeHead(400, 'Bad input', {
@@ -575,8 +568,8 @@ var Console = module.exports = function(opts, cb) {
             return;
         }
 
-        var isJson = ((req.headers || {}).accept || '').search('json') > 0 ||
-            (req.param('format') || '').trim().toLowerCase() === 'json';
+        const isJson = ((req.headers || {}).accept || '').search('json') > 0 ||
+            (req.query.format || '').trim().toLowerCase() === 'json';
 
         function routePage(res, execState, result){
             res.header['Link'] = headers.format('Link', {
@@ -590,7 +583,7 @@ var Console = module.exports = function(opts, cb) {
                 related:
                     _(result.related).chain()
                         .map(function(route){
-                            var parse = new MutableURI(route);
+                            const parse = new MutableURI(route);
                             return {
                                 method: parse.getParam('method'),
                                 path: parse.getParam('path'),
@@ -601,7 +594,7 @@ var Console = module.exports = function(opts, cb) {
                 tables:
                     _(result.tables).chain()
                         .map(function(table){
-                            var parse = new MutableURI(table);
+                            const parse = new MutableURI(table);
                             return {
                                 name: parse.getParam('name'),
                                 about: table
@@ -612,7 +605,7 @@ var Console = module.exports = function(opts, cb) {
         }
 
         // Start the top level event
-        var urlEvent = engine.beginEvent({
+        const urlEvent = engine.beginEvent({
             clazz: 'info',
             type: 'route',
             name: req.method.toUpperCase() + ' ' + req.url,
@@ -629,14 +622,14 @@ var Console = module.exports = function(opts, cb) {
             }
         });
 
-        var execState = [];
+        const execState = [];
         engine.execute('describe route "' + decodeURIComponent(path) + '" using method ' + method,
             {
                 request: holder,
                 parentEvent: urlEvent.event
             },
             function(emitter) {
-                setupExecStateEmitter(emitter, execState, req.param('events'));
+                setupExecStateEmitter(emitter, execState, req.query.events);
                 setupCounters(emitter);
                 emitter.on('end', urlEvent.cb);
             }
@@ -646,10 +639,10 @@ var Console = module.exports = function(opts, cb) {
     /*
      * '/q' is disabled only if the console is created with config, 'enable q' : false.
      */
-    var enableQ = opts['enable q'] === undefined ? true : opts['enable q'];
+    const enableQ = opts['enable q'] === undefined ? true : opts['enable q'];
 
-    var q =  function(req, res) {
-        var holder = {
+    const q =  function(req, res) {
+        const holder = {
             params: {},
             headers: {},
             parts: {},
@@ -657,7 +650,7 @@ var Console = module.exports = function(opts, cb) {
                 remoteAddress: req.connection.remoteAddress
             }
         };
-        var query = req.param('s');
+        const query = req.query.s;
         if (!query) {
             res.writeHead(400, 'Bad input', {
                 'content-type' : 'application/json'
@@ -666,10 +659,10 @@ var Console = module.exports = function(opts, cb) {
             res.end();
             return;
         }
-        query = sanitize(query).str;
+        // Note: Do not escape the query - it needs to be valid QL syntax for the parser
         collectHttpQueryParams(req, holder, true);
         collectHttpHeaders(req, holder);
-        var urlEvent = engine.beginEvent({
+        const urlEvent = engine.beginEvent({
             clazz: 'info',
             type: 'route',
             name: req.method.toUpperCase() + ' ' + req.url,
@@ -683,13 +676,13 @@ var Console = module.exports = function(opts, cb) {
                 return handleResponseCB(req, res, execState, err, results);
             }
         });
-        var execState = [];
+        const execState = [];
         engine.execute(query,
             {
                 request: holder,
                 parentEvent: urlEvent.event
             }, function(emitter) {
-                setupExecStateEmitter(emitter, execState, req.param('events'));
+                setupExecStateEmitter(emitter, execState, req.query.events);
                 emitter.on('end', urlEvent.cb);
             }
         );
@@ -707,8 +700,8 @@ var Console = module.exports = function(opts, cb) {
     // 404 Handling
     app.use(function(req, res, next) {
         compress(req, res, {logEmitter : engine});
-        var msg = 'Cannot ' + req.method + ' ' + sanitize(req.url).xss();
-        var accept = (req.headers || {}).accept || '';
+        const msg = 'Cannot ' + req.method + ' ' + validator.escape(req.url || '');
+        const accept = (req.headers || {}).accept || '';
         if (accept.search('json') > 0) {
             res.writeHead(404, {
                 'content-type' : 'application/json'
@@ -728,9 +721,10 @@ var Console = module.exports = function(opts, cb) {
     app.use(function(err, req, res, next){
         compress(req, res, {logEmitter : engine});
         // TODO call next() if recoverable, else next(err).
-        var status = err.status || 500;
-        var msg =  "Server Error - " + sanitize(err.msg || err).xss();
-        var accept = (req.headers || {}).accept || '';
+        const status = err.status || 500;
+        const errorMsg = err.msg || err.message || err.toString();
+        const msg =  "Server Error - " + validator.escape(errorMsg);
+        const accept = (req.headers || {}).accept || '';
         if (accept.search('json') > 0) {
             res.writeHead(status, {
                 'content-type' : 'application/json'
@@ -748,7 +742,7 @@ var Console = module.exports = function(opts, cb) {
 
     // Heartbeat - make sure to clear this on 'close'
     // TODO: Other details to include
-    var heartbeat = setInterval(function () {
+    const heartbeat = setInterval(function () {
         engine.emit(Engine.Events.HEART_BEAT, {
             pid: process.pid,
             uptime: Math.round(process.uptime()),
@@ -757,24 +751,24 @@ var Console = module.exports = function(opts, cb) {
     }, 60000);
 
     // Let the Engine cleanup during shutdown
-    app.on('close', function() {
+    server.on('close', function() {
         clearInterval(heartbeat);
         cacheUtil.stopCache(cache);
         serving = false;
     });
 
     // Also listen to WebSocket requests
-    var server = new WebSocketServer({
-        httpServer: app,
+    const wsServer = new WebSocketServer({
+        httpServer: server,
         autoAcceptConnections: false
     });
-    server.on('request', function(request) {
-        var connection = request.accept('ql.io-console', request.origin);
-        var events = [];
+    wsServer.on('request', function(request) {
+        const connection = request.accept('ql.io-console', request.origin);
+        let events = [];
         connection.on('message', function(message) {
-            var event = JSON.parse(message.utf8Data);
+            const event = JSON.parse(message.utf8Data);
             if(event.type === 'events') {
-                var arr = event.data;
+                const arr = event.data;
                 try {
                     events = JSON.parse(arr);
                 }
@@ -790,8 +784,8 @@ var Console = module.exports = function(opts, cb) {
                 }));
             }
             else if (event.type === 'script') {
-                var script = event.data;
-                var pack = {
+                const script = event.data;
+                const pack = {
                     request: {
                         headers: {},
                         params: {},
@@ -800,7 +794,7 @@ var Console = module.exports = function(opts, cb) {
                         }
                     }
                 };
-                var cb = function(emitter) {
+                const cb = function(emitter) {
                     _.each(events, function(event) {
                         emitter.on(event, function(packet) {
                             // Writes events to the client
@@ -813,7 +807,7 @@ var Console = module.exports = function(opts, cb) {
                     setupCounters(emitter);
                     emitter.on('end', function(err, results) {
                         if(err) {
-                            var packet = {
+                            const packet = {
                                 headers: {
                                     'content-type': 'application/json'
                                 },
@@ -867,11 +861,11 @@ var Console = module.exports = function(opts, cb) {
             if (_.isArray(v)) {
                 holder.params[k] = [];
                 _.each(v, function(val) {
-                    holder.params[k].push(sanitize(val).str);
+                    holder.params[k].push(validator.escape(val));
                 });
             }
             else {
-                holder.params[k] = sanitize(v).str;
+                holder.params[k] = validator.escape(v);
             }
         });
     }
@@ -883,18 +877,18 @@ var Console = module.exports = function(opts, cb) {
                 if (_.isArray(v)) {
                     holder.headers[k] = [];
                     _.each(v, function(val) {
-                        holder.headers[k].push(sanitize(val).str);
+                        holder.headers[k].push(validator.escape(val));
                     });
                 }
                 else {
-                    holder.headers[k] = sanitize(v).str;
+                    holder.headers[k] = validator.escape(v);
                 }
             }
         });
     }
 
     function setupExecStateEmitter(emitter, execState, eventParam) {
-        var obj, events;
+        let obj, events;
         try {
             obj = JSON.parse(eventParam);
             obj = obj.data;
@@ -943,13 +937,13 @@ var Console = module.exports = function(opts, cb) {
 
     function handleResponseCB(req, res, execState, err, results) {
         compress(req, res, {logEmitter : engine});   // TODO replace with a middleware
-        var reqSize = req.url.length + JSON.stringify(req.headers).length + req.method.length +1
-        var resSize = results ? JSON.stringify(results).length : JSON.stringify(err).length
+        const reqSize = req.url.length + JSON.stringify(req.headers).length + req.method.length +1
+        const resSize = results ? JSON.stringify(results).length : JSON.stringify(err).length
         engine.emitEvent("User's request size is " + reqSize + ", response size is "+resSize)
 
-        var cb = req.param('callback');
+        const cb = req.query.callback;
         if (err) {
-            var status = err.status || 400;
+            const status = err.status || 400;
             res.writeHead(status, {
                 'content-type' : 'application/json'
             });
@@ -963,8 +957,8 @@ var Console = module.exports = function(opts, cb) {
             res.end();
         }
         else {
-            var contentType = results.headers['content-type'];
-            var h = {
+            const contentType = results.headers['content-type'];
+            const h = {
                 'Connection': serving ? 'keep-alive' : 'close',
                 'Transfer-Encoding' : 'chunked'
             };
@@ -1001,6 +995,21 @@ var Console = module.exports = function(opts, cb) {
             req.connection.end();
         }
     }
+
+    // Add convenience methods for backward compatibility
+    this.listen = function(port, callback) {
+        return server.listen(port, callback);
+    };
+    
+    this.close = function(callback) {
+        return server.close(callback);
+    };
+
+    // For backward compatibility with tests that expect c.c.listen()
+    this.c = this;
+    
+    // For backward compatibility with tests that expect c.appServer.listen()
+    this.appServer = this;
 
     // The caller gets the app and the engine/event emitter
     if(cb) {

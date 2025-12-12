@@ -29,7 +29,7 @@ module.exports = {
         });
 
         var app = c.app;
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -55,7 +55,7 @@ module.exports = {
                         'h1' : 'v1',
                         'h2' : 'v2'
                     })
-                    app.close();
+                    c.close();
                     test.done();
                 });
             });
@@ -71,7 +71,7 @@ module.exports = {
         });
 
         var app = c.app;
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -95,7 +95,7 @@ module.exports = {
                         'h1' : 'v1',
                         'h2' : 'v2'
                     })
-                    app.close();
+                    c.close();
                     test.done();
                 });
             });
@@ -111,7 +111,7 @@ module.exports = {
         });
 
         var app = c.app;
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -135,7 +135,7 @@ module.exports = {
                         'h1' : 'v1',
                         'h2' : 'v2'
                     })
-                    app.close();
+                    c.close();
                     test.done();
                 });
             });

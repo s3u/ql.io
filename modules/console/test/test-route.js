@@ -31,8 +31,9 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
             testHttpapp.post('/ping/pong', function(req, res) {
                 var data = '';
                 req.on('data', function(chunk) {
@@ -43,7 +44,7 @@ module.exports = {
                 });
             });
 
-            testHttpapp.listen(80126, function() {
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -61,8 +62,8 @@ module.exports = {
                         test.ok(json.user, 'missing user data');
                         test.ok(json.user.Ack, 'missing user Ack');
                         test.equal(json.user.Ack, 'Success');
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -78,8 +79,9 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
             testHttpapp.post('/ping/pong', function(req, res) {
                 var data = '';
                 req.on('data', function(chunk) {
@@ -90,7 +92,7 @@ module.exports = {
                 });
             });
 
-            testHttpapp.listen(80126, function() {
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -109,8 +111,8 @@ module.exports = {
                         test.ok(json.user.Ack, 'missing user Ack');
                         test.equal(json.user.Ack, 'Success');
                         test.equal(json.bestOffers, 'Fixed Value');
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -126,8 +128,9 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
             testHttpapp.post('/ping/pong', function(req, res) {
                 var data = '';
                 req.on('data', function(chunk) {
@@ -138,7 +141,7 @@ module.exports = {
                 });
             });
 
-            testHttpapp.listen(80126, function() {
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -156,8 +159,8 @@ module.exports = {
                         test.ok(json.user, 'missing user data');
                         test.ok(json.user.Ack, 'missing user Ack');
                         test.equal(json.user.Ack, 'Success');
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -173,8 +176,9 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
             testHttpapp.post('/ping/pong', function(req, res) {
                 var data = '';
                 req.on('data', function(chunk) {
@@ -185,7 +189,7 @@ module.exports = {
                 });
             });
 
-            testHttpapp.listen(80126, function() {
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -203,8 +207,8 @@ module.exports = {
                     });
                     resp.addListener('end', function() {
                         test.deepEqual(JSON.parse(data), {"val" : {"postPayload" : {"ItemID" : "1818", "UserID" : "someone"}}});
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -222,8 +226,9 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
             testHttpapp.post('/ping/pong', function(req, res) {
                 var data = '';
                 req.on('data', function(chunk) {
@@ -234,7 +239,7 @@ module.exports = {
                 });
             });
 
-            testHttpapp.listen(80126, function() {
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -252,8 +257,8 @@ module.exports = {
                     });
                     resp.addListener('end', function() {
                         test.deepEqual(JSON.parse(data), {"val" : {"postPayload" : {"ItemID" : "1818", "UserID" : "someone"}}});
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -271,8 +276,9 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
             testHttpapp.post('/ping/pong', function(req, res) {
                 var data = '';
                 req.on('data', function(chunk) {
@@ -283,7 +289,7 @@ module.exports = {
                 });
             });
 
-            testHttpapp.listen(80126, function() {
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -301,8 +307,8 @@ module.exports = {
                     });
                     resp.addListener('end', function() {
                         test.deepEqual(JSON.parse(data), {"val" : {"postPayload" : {"ItemID" : "1818", "UserID" : "someone"}}});
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -319,8 +325,9 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
             testHttpapp.post('/ping/pong', function(req, res) {
                 var data = '';
                 req.on('data', function(chunk) {
@@ -331,7 +338,7 @@ module.exports = {
                 });
             });
 
-            testHttpapp.listen(80126, function() {
+            testHttpappServer.listen(80126, function() {
 
                 var options = {
                     host : 'localhost',
@@ -350,8 +357,8 @@ module.exports = {
                     });
                     resp.addListener('end', function() {
                         test.deepEqual(JSON.parse(data), {"val" : {"postPayload" : {"ItemID" : "1818", "UserID" : "someone"}}});
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -368,8 +375,9 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
             testHttpapp.get('/bing/bong', function(req, res) {
                 req.on('data', function(chunk) {
                     // do nothing
@@ -379,7 +387,7 @@ module.exports = {
                 });
             });
 
-            testHttpapp.listen(80126, function() {
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -397,8 +405,8 @@ module.exports = {
                     });
                     resp.addListener('end', function() {
                         test.deepEqual(JSON.parse(data), {"val":{"QueryKeywords":"ipod"}});
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -416,8 +424,9 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
             testHttpapp.get('/bing/bong', function(req, res) {
                 req.on('data', function(chunk) {
                     // do nothing
@@ -427,7 +436,7 @@ module.exports = {
                 });
             });
 
-            testHttpapp.listen(80126, function() {
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -445,8 +454,8 @@ module.exports = {
                     });
                     resp.addListener('end', function() {
                         test.deepEqual(JSON.parse(data), {"val":{"QueryKeywords":"ipod"}});
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -464,7 +473,7 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(4000, function () {
+        c.appServer.listen(4000, function () {
         });
 
         var options = {
@@ -481,7 +490,7 @@ module.exports = {
             });
             resp.addListener('end', function () {
                 test.equal(resp.statusCode, 404);
-                c.app.close();
+                c.c.close();
                 test.done();
             });
         });
@@ -495,7 +504,7 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(4000, function () {
+        c.appServer.listen(4000, function () {
         });
 
         var options = {
@@ -512,7 +521,7 @@ module.exports = {
             });
             resp.addListener('end', function () {
                 test.equal(resp.statusCode, 404);
-                c.app.close();
+                c.c.close();
                 test.done();
             });
         });
@@ -526,7 +535,7 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(4000, function () {
+        c.appServer.listen(4000, function () {
         });
 
         var options = {
@@ -543,7 +552,7 @@ module.exports = {
             });
             resp.addListener('end', function () {
                 test.equal(resp.statusCode, 404);
-                c.app.close();
+                c.c.close();
                 test.done();
             });
         });
@@ -557,9 +566,10 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
-            testHttpapp.listen(80126, function() {
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
+            testHttpappServer.listen(80126, function() {
                 var mybody = '<?xml version="1.0" encoding="utf-8"?>\n<UploadSiteHostedPicturesRequest xmlns="urn:ebay:apis:eBLBaseComponents">\n\
         <ExternalPictureURL>http://developer.ebay.com/DevZone/XML/docs/images/hp_book_image.jpg</ExternalPictureURL> \n\
         <PictureName>HarryPotterPic-1</PictureName>\n\
@@ -594,8 +604,8 @@ module.exports = {
                             test.ok(false, "response is not json")
                         }
                         test.equal(json.Ack, "Success");
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -615,9 +625,10 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
-            testHttpapp.listen(80126, function() {
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -633,8 +644,8 @@ module.exports = {
                     resp.addListener('end', function() {
                         var json = JSON.parse(data);
                         test.ok(_.isArray(json), 'expecting an array');
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -650,9 +661,10 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
-            testHttpapp.listen(80126, function() {
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -668,8 +680,8 @@ module.exports = {
                     resp.addListener('end', function() {
                         var json = JSON.parse(data);
                         test.ok(_.isArray(json), 'expecting an array');
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -685,9 +697,10 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
-            testHttpapp.listen(80126, function() {
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -702,8 +715,8 @@ module.exports = {
                     });
                     resp.addListener('end', function() {
                         test.equal(data, '{"err":"No matching route"}');
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -719,9 +732,10 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
-            testHttpapp.listen(80126, function() {
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -736,8 +750,8 @@ module.exports = {
                     });
                     resp.addListener('end', function() {
                         test.equal(data, '{"err":"No matching route"}');
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -753,9 +767,10 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
-            testHttpapp.listen(80126, function() {
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -776,8 +791,8 @@ module.exports = {
                         }
                         test.ok(_.isArray(json), 'expected an array');
                         test.equal(json.length, 1);
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -793,9 +808,10 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
-            testHttpapp.listen(80126, function() {
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -816,8 +832,8 @@ module.exports = {
                         }
                         test.ok(_.isArray(json), 'expected an array');
                         test.equal(json.length, 1);
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });
@@ -833,9 +849,10 @@ module.exports = {
             'enable console' : false,
             connection : 'close'
         });
-        c.app.listen(3000, function() {
-            var testHttpapp = express.createServer();
-            testHttpapp.listen(80126, function() {
+        c.appServer.listen(3000, function() {
+            var testHttpapp = express();
+    var testHttpappServer = http.createServer(testHttpapp);
+            testHttpappServer.listen(80126, function() {
                 var options = {
                     host : 'localhost',
                     port : 3000,
@@ -855,8 +872,8 @@ module.exports = {
                             test.ok(false, "response is not json")
                         }
                         test.equal(json.Ack, 'Success');
-                        c.app.close();
-                        testHttpapp.close();
+                        c.c.close();
+                        testHttpc.close();
                         test.done();
                     });
                 });

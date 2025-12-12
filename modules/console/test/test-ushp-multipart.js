@@ -40,9 +40,9 @@ var testUSHPMultipart = function(test) {
 
     var app = c.app;
 
-    app.listen(3000, function() {
+    c.listen(3000, function() {
         var form = new FormData();
-        form.append('body', new Buffer('<test>Test Body</test>'));
+        form.append('body', Buffer.from('<test>Test Body</test>'));
 
         var dir = __dirname + '/images/';
         // var files = [ 'logoEbay_x45.gif', 'ebay_closeup.jpeg', 'ql.io.jpg' ];
@@ -78,7 +78,7 @@ var testUSHPMultipart = function(test) {
             });
             console.log(data);
             test.equals(response.statusCode, 200);
-            app.close();
+            c.close();
             test.done();
         });
 

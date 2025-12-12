@@ -31,7 +31,7 @@ module.exports = {
             'enable console':false,
             connection:'close'
         });
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var options = {
                 host:'localhost',
                 port:3000,
@@ -46,7 +46,7 @@ module.exports = {
                 });
                 resp.addListener('end', function () {
                     test.ok(/^text\/html/.test(resp.headers['content-type']));
-                    c.app.close();
+                    c.c.close();
                     test.done();
                 });
             });
@@ -62,7 +62,7 @@ module.exports = {
             'enable console':false,
             connection:'close'
         });
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var options = {
                 host:'localhost',
                 port:3000,
@@ -87,7 +87,7 @@ module.exports = {
                         test.ok(route.about, 'expected route info to contain "about"');
                         test.ok(_.isString(route.info), 'expected route info to contain "info"');
                     });
-                    c.app.close();
+                    c.c.close();
                     test.done();
                 });
             });
@@ -103,7 +103,7 @@ module.exports = {
             'enable console':false,
             connection:'close'
         });
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var options = {
                 host:'localhost',
                 port:3000,
@@ -125,7 +125,7 @@ module.exports = {
                         test.ok(route.about, 'expected route info to contain "about"');
                         test.ok(_.isString(route.info), 'expected route info to contain "info"');
                     });
-                    c.app.close();
+                    c.c.close();
                     test.done();
                 });
             });
@@ -142,7 +142,7 @@ module.exports = {
             'enable console':false,
             connection:'close'
         });
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var options = {
                 host:'localhost',
                 port:3000,
@@ -157,7 +157,7 @@ module.exports = {
                 });
                 resp.addListener('end', function () {
                     test.ok(/^text\/html/.test(resp.headers['content-type']));
-                    c.app.close();
+                    c.c.close();
                     test.done();
                 });
             });
@@ -173,7 +173,7 @@ module.exports = {
             'enable console':false,
             connection:'close'
         });
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var options = {
                 host:'localhost',
                 port:3000,
@@ -200,7 +200,7 @@ module.exports = {
                     test.ok(route.tables.length == 5, 'Expected length = 5');
                     test.ok(_.isArray(route.related), 'list.body.related is not array');
                     test.ok(route.related.length == 0, 'Expected length = 0');
-                    c.app.close();
+                    c.c.close();
                     test.done();
                 });
             });
@@ -216,7 +216,7 @@ module.exports = {
             'enable console':false,
             connection:'close'
         });
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var options = {
                 host:'localhost',
                 port:3000,
@@ -240,7 +240,7 @@ module.exports = {
                     test.ok(route.tables.length == 5, 'Expected length = 5');
                     test.ok(_.isArray(route.related), 'list.body.related is not array');
                     test.ok(route.related.length == 0, 'Expected length = 0');
-                    c.app.close();
+                    c.c.close();
                     test.done();
                 });
             });
@@ -256,7 +256,7 @@ module.exports = {
             'enable console':false,
             connection:'close'
         });
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var options = {
                 host:'localhost',
                 port:3000,
@@ -271,7 +271,7 @@ module.exports = {
                 });
                 resp.addListener('end', function () {
                     test.ok(/^text\/html/.test(resp.headers['content-type']));
-                    c.app.close();
+                    c.c.close();
                     test.done();
                 });
 
@@ -288,7 +288,7 @@ module.exports = {
             'enable console':false,
             connection:'close'
         });
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var options = {
                 host:'localhost',
                 port:3000,
@@ -311,7 +311,7 @@ module.exports = {
                         test.ok(table.name, "table 'name' not provided");
                         test.ok(table.about, "table 'about' not provided")
                     });
-                    c.app.close();
+                    c.c.close();
                     test.done();
                 });
             });
@@ -327,7 +327,7 @@ module.exports = {
             'enable console':false,
             connection:'close'
         });
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var options = {
                 host:'localhost',
                 port:3000,
@@ -347,7 +347,7 @@ module.exports = {
                         test.ok(table.name, "table 'name' not provided");
                         test.ok(table.about, "table 'about' not provided")
                     });
-                    c.app.close();
+                    c.c.close();
                     test.done();
                 });
             });
@@ -363,7 +363,7 @@ module.exports = {
             'enable console':false,
             connection:'close'
         });
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var options = {
                 host:'localhost',
                 port:3000,
@@ -384,7 +384,7 @@ module.exports = {
                     test.ok(_.isArray(table.routes) & table.routes.length == 3);
                     test.ok(table.select && table.select.uri && table.select.uri && table.select.params
                         && table.select.headers && table.select.body);
-                    c.app.close();
+                    c.c.close();
                     test.done();
                 });
             });
@@ -400,7 +400,7 @@ module.exports = {
             'enable console':false,
             connection:'close'
         });
-        c.app.listen(3000, function () {
+        c.c.listen(3000, function () {
             var options = {
                 host:'localhost',
                 port:3000,
@@ -424,7 +424,7 @@ module.exports = {
                     test.ok(_.isArray(table.routes) & table.routes.length == 3);
                     test.ok(table.select && table.select.method && table.select.uri && table.select.params
                         && table.select.headers && table.select.body);
-                    c.app.close();
+                    c.c.close();
                     test.done();
                 });
             });

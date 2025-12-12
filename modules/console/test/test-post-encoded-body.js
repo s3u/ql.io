@@ -41,7 +41,7 @@ var app = c.app;
 
 module.exports = {
     'post body': function(test) {
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var statement = 'select itemId from finditems where keywords = "iPad" and  q = "{q}"';
             var options = {
                 host: 'localhost',
@@ -90,7 +90,7 @@ module.exports = {
                             _.each(ids, function(id) {
                                 test.ok(reorg[id], 'ItemID in req and resp don\'t match')
                             })
-                            app.close();
+                            c.close();
                             test.done();
                         });
 

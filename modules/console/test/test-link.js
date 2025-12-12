@@ -32,7 +32,7 @@ module.exports = {
         });
 
         var app = c.app;
-        app.listen(3000, function() {
+        c.listen(3000, function() {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -55,7 +55,7 @@ module.exports = {
                     var results = JSON.parse(data);
                     test.ok(results.length > 0);
                     test.ok(!res.headers.link)
-                    app.close();
+                    c.close();
                     test.done();
                 });
             });
@@ -82,7 +82,7 @@ module.exports = {
             data: JSON.stringify(events)
         }
         path = path + '&events=' +  encodeURIComponent(JSON.stringify(packet));
-        app.listen(3000, function () {
+        c.listen(3000, function () {
             var options = {
                 host: 'localhost',
                 port: 3000,
@@ -108,7 +108,7 @@ module.exports = {
                     var link = res.headers['link'];
                     link = headers.parse('Link', link);
                     test.equals(link.href.indexOf('data:application/json,'), 0);
-                    app.close();
+                    c.close();
                     test.done();
                 });
             });
