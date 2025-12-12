@@ -20,7 +20,7 @@ echo ""
 echo "Press Ctrl+C to stop the server"
 echo "----------------------------------------"
 
-node node_modules/.bin/ql.io.app \
+node modules/app/bin/ql.io-app.js \
   --tables $PWD/tables/ \
   --routes $PWD/routes/ \
   --config $PWD/config/dev.json \

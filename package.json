@@ -15,6 +15,7 @@
         "modules/uri-template"
     ],
     "scripts": {
+        "start": "bin/start.sh",
         "test": "npm test --workspaces",
         "test:engine": "npm test --workspace=modules/engine",
         "test:console": "npm test --workspace=modules/console",

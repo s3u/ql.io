@@ -149,6 +149,8 @@ exports.exec = function() {
         disableQ: programOpts.disableQ,
         noWorkers: parseInt(programOpts.noWorkers),
         'request-id': programOpts.requestId || 'Request-ID',
+        'enable console': !programOpts.disableConsole,
+        'enable q': !programOpts.disableQ,
         loggerFn: loggerFn,
         ecv: {
             path: programOpts.ecvPath,
@@ -313,7 +315,7 @@ function createConsole(options, clusterWrapper, cb) {
         };
         
         // The Console constructor takes options and a callback
-        const console = new Console(options, function(app, monApp, engine) {
+        const consoleInstance = new Console(options, function(app, monApp, engine) {
             // Merge the engine emitter events with our emitter
             if (engine) {
                 engine.on('info', function(event, message) {
@@ -324,6 +326,24 @@ function createConsole(options, clusterWrapper, cb) {
                 });
                 engine.on('warning', function(event, message) {
                     emitter.emit('warning', event, message);
+                });
+            }
+            
+            // Start the servers
+            if (app && app.listen) {
+                const ports = Array.isArray(options.port) ? options.port : [options.port];
+                ports.forEach(port => {
+                    app.listen(port, function() {
+                        console.log(`ql.io server listening on port ${port}`);
+                        emitter.emit('info', `Server started on port ${port}`);
+                    });
+                });
+            }
+            
+            if (monApp && monApp.listen && options.monPort) {
+                monApp.listen(options.monPort, function() {
+                    console.log(`ql.io monitoring server listening on port ${options.monPort}`);
+                    emitter.emit('info', `Monitoring server started on port ${options.monPort}`);
                 });
             }
             

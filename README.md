@@ -1,37 +1,84 @@
 [![ql.io](http://ql.io/images/ql.io-large.png)](http://ql.io)
 
 ql.io is a declarative, data-retrieval and aggregation gateway for quickly consuming HTTP APIs. See
-[ql.io](http://ql.io) for docs, demos and examples. 
-
-![Travis status](https://secure.travis-ci.org/ql-io/ql.io.png)
 
 ## Requirements
 
 - Node.js 18.0.0 or higher
 - npm 8.0.0 or higher
 
-## How to Build ql.io 
+## Quick Start
 
-To build ql.io on your own, follow these steps:
+### 1. Clone and Build
 
-    git clone git://github.com/ql-io/ql.io.git
-    cd ql.io
-    make install
+```bash
+git clone https://github.com/ql-io/ql.io.git
+cd ql.io
+make install
+```
 
-This project uses npm workspaces to manage dependencies across all modules.
+### 2. Run the Server
 
-## Testing
+```bash
+# Start ql.io server with web console
+bin/start.sh
 
-Run all tests:
+# Or use npm directly
+npm start
+```
 
-    make test 
+The server will start on:
+- **Web Console**: http://localhost:3000/console
+- **API Server**: http://localhost:3000
+- **Monitoring**: http://localhost:3001
 
-Run tests for specific modules:
+### 3. Test Your Installation
 
-    make test-engine
-    make test-console
-    make test-compiler
-    make test-app
+```bash
+# Run all tests (298 tests across 7 modules)
+make test
+
+# Or use npm
+npm test
+```
+
+## Development
+
+### Project Structure
+
+This project uses **npm workspaces** to manage 7 modules:
+
+- **engine** - Core ql.io execution engine
+- **compiler** - QL script compiler  
+- **console** - Web console and HTTP interface
+- **app** - Application framework
+- **mutable-uri** - URI manipulation utilities
+- **str-template** - String templating
+- **uri-template** - URI templating
+
+### Testing Individual Modules
+
+```bash
+# Test specific modules
+make test-engine      # Core engine tests
+make test-console     # Web console tests  
+make test-compiler    # Compiler tests
+make test-app         # Application tests
+
+# Or using npm
+npm run test:engine
+npm run test:console
+npm run test:compiler
+npm run test:app
+```
+
+### Build Commands
+
+```bash
+make clean           # Clean all dependencies
+make install         # Install all workspace dependencies
+make test           # Run complete test suite
+```
 
 ## Project Structure
 
