@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Layout, Typography, Button, Space, Divider } from 'antd'
 import { PlayCircleOutlined, TableOutlined, HistoryOutlined } from '@ant-design/icons'
 import SqlEditor from './components/SqlEditor'

@@ -11,7 +11,7 @@ interface SqlEditorProps {
 const SqlEditor: React.FC<SqlEditorProps> = ({ value, onChange, onExecute }) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
 
-  const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor) => {
+  const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor, monaco: any) => {
     editorRef.current = editor
     
     // Add keyboard shortcut for execution (Ctrl+Enter or Cmd+Enter)
