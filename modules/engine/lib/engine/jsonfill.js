@@ -17,7 +17,7 @@
 'use strict';
 
 var _ = require('underscore'),
-    jsonPath = require('JSONPath'),
+    jsonPath = require('jsonpath'),
     strTemplate = require('ql.io-str-template'),
     assert = require('assert');
 
@@ -122,7 +122,7 @@ function projectOne(name, items, bag) {
     }
 }
 function projectOne_(name, item, bag) {
-    var obj = jsonPath.eval(item, name.trim(), {flatten: true, wrap: false, sandbox: bag});
+    var obj = jsonPath.query(item, name.trim());
     // JSONPath returns false when there is no match. This leads to 'false' values. Switch to undefined.
     return obj ? obj : undefined;
 }
@@ -155,7 +155,7 @@ function projectEach(item, columns, bag) {
         // Flatten results as the selector may include '..'
         name = column.name.trim();
         flatten = name.indexOf('..') >= 0;
-        obj = jsonPath.eval(item, name, {flatten: flatten, sandbox: bag});
+        obj = jsonPath.query(item, name);
         if(obj == false) obj = undefined;
         if(obj && _.isArray(obj) && obj.length == 1) {
             obj = obj[0];

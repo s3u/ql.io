@@ -28,7 +28,7 @@ var assert = require('assert'),
     normalize = require('path').normalize,
     request = require('../http/request.js'),
     _util = require('../util.js'),
-    Iconv  = require('iconv').Iconv,
+    iconv = require('iconv-lite'),
     mongo = require('mongodb');
 
 var mongoConnector = module.exports = function(table, statement, type, bag, path){

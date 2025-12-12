@@ -16,11 +16,17 @@
 
 'use strict';
 
-var expat = require('xml2json');
+var { XMLParser } = require('fast-xml-parser');
 
 exports.toJson = function(data, respCb, errorCb) {
     try {
-        return respCb(expat.toJson(data, {coerce: true, object: true}));
+        const parser = new XMLParser({
+            ignoreAttributes: false,
+            parseAttributeValue: true,
+            parseTagValue: true
+        });
+        const result = parser.parse(data);
+        return respCb(result);
     }
     catch(error) {
         return errorCb(error);

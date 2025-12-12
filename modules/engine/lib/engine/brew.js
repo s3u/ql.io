@@ -38,7 +38,23 @@ exports.go = function(options) {
     // Compile the DDL and post process
     try {
         var plan = statement || compiler.compile(script);
-        walk(options, plan.rhs || plan);
+        var statements = plan.rhs || plan;
+        
+        // Handle both single statements and arrays of statements
+        if (Array.isArray(statements)) {
+            statements.forEach(function(stmt) {
+                walk(options, stmt);
+            });
+        } else if (statements && typeof statements === 'object' && statements['0']) {
+            // Handle array-like objects (compiler returns object with numeric keys)
+            Object.keys(statements).forEach(function(key) {
+                if (!isNaN(key)) {
+                    walk(options, statements[key]);
+                }
+            });
+        } else {
+            walk(options, statements);
+        }
     }
     catch(e) {
         console.log('Error loading ' + options.path + options.name + '.ql');
@@ -51,12 +67,14 @@ exports.go = function(options) {
 }
 
 function walk(options, statement) {
-    if(statement.type === 'create') {
+    if(statement && statement.type === 'create') {
         var table = new Table(options, statement.comments, statement);
         options.cb(null, table);
     }
-    _.each(statement.dependsOn, function(dependency) {
-        walk(options, dependency);
-    })
+    if(statement && statement.dependsOn) {
+        _.each(statement.dependsOn, function(dependency) {
+            walk(options, dependency);
+        });
+    }
 }
 

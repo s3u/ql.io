@@ -28,5 +28,5 @@ exports.serialize = function(type, content, statement, params, defaults) {
         statement: statement,
         params: params
     };
-    return mustache.to_html(content, holder);
+    return mustache.render(content, holder);
 }

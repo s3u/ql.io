@@ -28,7 +28,7 @@ var assert = require('assert'),
     normalize = require('path').normalize,
     request = require('../http/request.js'),
     _util = require('../util.js'),
-    Iconv  = require('iconv').Iconv;
+    iconv = require('iconv-lite');
 
 var skipHeaders = ['connection', 'host', 'referer', 'content-length',
     'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers',
@@ -86,16 +86,16 @@ var httpConnector = module.exports = function(table, statement, type, bag, path)
         });
 
         // create a buffer large enough to fit the entire request and copy the request into it
-        var buf = new Buffer(length);
+        var buf = Buffer.alloc(length);
         _.each(args.body, function(b) {
             idx = idx + b.copy(buf, idx);
         });
 
-        var iconv = new Iconv(encoding, 'UTF-8');
-        buf = (iconv.convert(buf)); // convert the buf to utf8
+        // Convert buffer from encoding to UTF-8 using iconv-lite
+        buf = iconv.decode(buf, encoding);
 
         return {
-            content: buf.toString('UTF-8')
+            content: buf
         };
     };
     this['patch response'] = function(args) {return args.body; };
@@ -579,11 +579,18 @@ function send(verb, args, uri, params, cb) {
             if(err) {
                 return cb(err);
             }
+            // Authentication succeeded, continue with the request
+            makeHttpRequest();
         });
+        return; // Don't continue execution until auth completes
     }
-
-    // Parse - used by downstream patches
-    var parsed = new MutableURI(uri);
+    
+    // No auth required, proceed directly
+    makeHttpRequest();
+    
+    function makeHttpRequest() {
+        // Parse - used by downstream patches
+        var parsed = new MutableURI(uri);
 
     // Headers
     var headers = {
@@ -642,29 +649,30 @@ function send(verb, args, uri, params, cb) {
         key = args.resource.computeKey(verb.table, args.resource.method || 'GET', uri, params, headers, body, reqIdName, args);
     }
 
-    request.send({
-        name: args.name,
-        cb: cb,
-        table: verb.table,
-        config: args.config || {},
-        uri: uri,
-        parsed: parsed,
-        method: args.resource.method || 'GET',
-        headers: headers,
-        body: body,
-        params: params,
-        parts: args.parts,
-        parentEvent: args.parentEvent,
-        requestId: reqIdName,
-        emitter: args.emitter,
-        logEmitter: args.logEmitter,
-        statement: args.statement,
-        resource: args.resource,
-        xformers: args.xformers,
-        key: key,
-        cache: args.cache,
-        expires: verb.cache.expires
-    });
+        request.send({
+            name: args.name,
+            cb: cb,
+            table: verb.table,
+            config: args.config || {},
+            uri: uri,
+            parsed: parsed,
+            method: args.resource.method || 'GET',
+            headers: headers,
+            body: body,
+            params: params,
+            parts: args.parts,
+            parentEvent: args.parentEvent,
+            requestId: reqIdName,
+            emitter: args.emitter,
+            logEmitter: args.logEmitter,
+            statement: args.statement,
+            resource: args.resource,
+            xformers: args.xformers,
+            key: key,
+            cache: args.cache,
+            expires: verb.cache.expires
+        });
+    }
 }
 
 

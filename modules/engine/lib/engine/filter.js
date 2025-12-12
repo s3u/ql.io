@@ -18,7 +18,7 @@
 
 var jsonfill = require('./jsonfill.js'),
     _ = require('underscore'),
-    jsonPath = require('JSONPath'),
+    jsonPath = require('jsonpath'),
     assert = require('assert');
 
 exports.reject = function(resource, statement, context, source) {
@@ -88,7 +88,7 @@ function _iterate(resource, statement, context, source, keep) {
             for(var k = 0; k < matched.length; k++) {
                 var match = false;
                 var row = filtered[matched[k]];
-                var result = jsonPath.eval(row, path, {flatten: true, sandbox: context});
+                var result = jsonPath.query(row, path);
                 // If the result matches any expected[], keep it.
                 for(j = 0; j < expected.length; j++) {
                     if(!match && result) {

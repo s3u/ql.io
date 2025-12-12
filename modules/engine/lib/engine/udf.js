@@ -16,7 +16,7 @@
 
 'use strict';
 
-var jsonPath = require('JSONPath'),
+var jsonPath = require('jsonpath'),
     async = require('async'),
     _ = require('underscore');
 
@@ -128,8 +128,13 @@ exports.applyWhere = function(opts, statement, results, cb, tempNames, tempIndic
 }
 
 exports.applyAssign = function(opts, statement, cb){
-    var fn = resolveUdf(opts, statement),
-        context = opts.context,
+    var fn = resolveUdf(opts, statement);
+    
+    if (!fn) {
+        return cb(new Error('UDF not found: ' + statement.udf));
+    }
+    
+    var context = opts.context,
         args = _.map(statement.args, function(arg){
             if(arg.name){
                 return context[arg.name];
@@ -141,14 +146,18 @@ exports.applyAssign = function(opts, statement, cb){
             __proto__: context
         },
         result, err;
+    
     try{
-        result = fn.apply(wrapper, args);;
+        result = fn.apply(wrapper, args);
     }catch(e){
         err = e;
-    }finally{
+    }
+    
+    if (err) {
+        cb(err);
+    } else {
         cb(null, result);
     }
-    //return result;
 }
 function resolve(opts, columns, extras, udf, tempNames, tempIndices) {
     var fn = resolveUdf(opts, udf);
@@ -214,8 +223,29 @@ function resolve(opts, columns, extras, udf, tempNames, tempIndices) {
 }
 
 function resolveUdf(opts, where) {
-    var fname = where.name;
-    var fn = jsonPath.eval(opts.context, fname);
+    var fname = where.name || where.udf;
+    
+    // Handle dot notation directly (e.g., "u.add")
+    if (fname && fname.includes('.')) {
+        var parts = fname.split('.');
+        var obj = opts.context;
+        
+        for (var i = 0; i < parts.length; i++) {
+            if (obj && typeof obj === 'object' && parts[i] in obj) {
+                obj = obj[parts[i]];
+            } else {
+                obj = undefined;
+                break;
+            }
+        }
+        
+        if (typeof obj === 'function') {
+            return obj;
+        }
+    }
+    
+    // Fallback to JSONPath for complex queries
+    var fn = jsonPath.query(opts.context, fname);
     return fn[0];
 }
 

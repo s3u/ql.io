@@ -14,9 +14,9 @@ install:
 	# node_modules/.bin/dox --title ql.io --desc "Engine APIs" lib/*.js > docs/engine.html;
 
 .PHONY : test
-test: 
-	node_modules/.bin/nodeunit test;
+test: install
+	npm test
 
 test-part:
-	node_modules/.bin/nodeunit test --reporter junit --output ../../reports
+	npm test -- --ci --reporters=default --reporters=jest-junit
 

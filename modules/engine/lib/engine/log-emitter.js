@@ -18,7 +18,7 @@
 
 var eventTypes = require('./event-types.js'),
     _ = require('underscore'),
-    uuid = require('node-uuid'),
+    { v4: uuid } = require('uuid'),
     events = require("events"),
     util = require('util');
 
@@ -77,10 +77,13 @@ var LogEmitter = module.exports = function() {
             cb: function(e, r, m) {
                 var message = {status : 'Success'};
                 if (e) {
-                    if(e.emitted === undefined) {
+                    if(typeof e === 'object' && e.emitted === undefined) {
                         event.clazz = 'error';
                         that.emit(eventTypes.ERROR, event, e);
                         e.emitted = true;
+                    } else if(typeof e === 'string') {
+                        event.clazz = 'error';
+                        that.emit(eventTypes.ERROR, event, e);
                     }
                     message.status = 'Failure'
                 }
@@ -94,10 +97,13 @@ var LogEmitter = module.exports = function() {
                 that.emit('end', err, results);
                 var message = {status : 'Success'};
                 if(err) {
-                    if(err.emitted === undefined) {
+                    if(typeof err === 'object' && err.emitted === undefined) {
                         event.clazz = 'error';
                         that.emitError(event, err);
                         err.emitted = true;
+                    } else if(typeof err === 'string') {
+                        event.clazz = 'error';
+                        that.emitError(event, err);
                     }
                     message.status = 'Failure'
                 }

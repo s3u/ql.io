@@ -18,7 +18,7 @@
 
 var _ = require('underscore'),
     Verb = require('./verb.js'),
-    markdown = require('markdown'),
+    { marked } = require('marked'),
     HttpConnector = require('./httpConnector.js'),
     mongo = require('mongodb');;
 
@@ -42,7 +42,7 @@ var Table = module.exports = function(opts, comments, statement) {
     self.comments = '';
     if(comments && comments.length > 0) {
         _.each(comments, function(comment) {
-            self.comments += markdown.markdown.toHTML(comment.text);
+            self.comments += marked(comment.text);
         });
     }
     var verbs = ['select', 'insert', 'update', 'delete'];
@@ -50,7 +50,8 @@ var Table = module.exports = function(opts, comments, statement) {
         var type = verbs[i];
         if(self.statement[type]) {
             try {
-                var verb = new Verb(self.name, self.statement[type], type, bag, self.opts.path, statement.connector);
+                var connector = statement.connector || 'http'; // Default to http connector
+                var verb = new Verb(self.name, self.statement[type], type, bag, self.opts.path, connector);
                 self.verbs[type] = verb;
             }
             catch(e) {

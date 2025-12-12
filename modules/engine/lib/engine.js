@@ -20,7 +20,7 @@
 
 'use strict';
 
-var configLoader = require('./engine/config.js'),
+const configLoader = require('./engine/config.js'),
     tableLoader = require('./engine/load.js'),
     routeLoader = require('./engine/load-routes.js'),
     connectorLoader = require('./engine/load-connector.js'),
@@ -41,7 +41,7 @@ var configLoader = require('./engine/config.js'),
     eventTypes = require('./engine/event-types.js'),
     LogEmitter = require('./engine/log-emitter.js'),
     winston = require('winston'),
-    compiler = require('ql.io-compiler'),
+    compiler = require('../../compiler/lib/compiler.js'),
     visualization = require('./engine/visualization'),
     udf = require('./engine/udf'),
     _ = require('underscore'),
@@ -66,8 +66,8 @@ process.on('uncaughtException', function(error) {
  * - routes: Path to the directory containing route scripts.
  *
  */
-var Engine = module.exports = function(opts) {
-    var self = this;
+const Engine = module.exports = function(opts) {
+    const self = this;
 
     // Engine is a LogEmitter.
     LogEmitter.call(this);
@@ -104,7 +104,7 @@ var Engine = module.exports = function(opts) {
 
     // Settings - copy everything except the known few.
     this.settings = {};
-    var that = this;
+    const that = this;
     _.each(opts, function(v, k) {
         if(k !== 'tables' || k !== 'routes' || k !== 'config') {
             that.settings[k] = v;
@@ -189,12 +189,12 @@ util.inherits(Engine, LogEmitter);
  */
 // this execute wrapper is for logging purpose only.
 Engine.prototype.execute = function(){
-    var grandParentEvent = null;
+    let grandParentEvent = null;
     if(arguments.length > 1){
         grandParentEvent = arguments[1].parentEvent
     }
 
-    var parentEvent = this.beginEvent({
+    const parentEvent = this.beginEvent({
         parent: grandParentEvent,
         name: 'start-exec',
         message: 'none',
@@ -209,13 +209,13 @@ Engine.prototype.execute = function(){
 The real logic of engine execution
  */
 Engine.prototype.doExecute = function() {
-    var script, opts, func;
+    let script, opts, func;
 
-    var route, context, plan, parentEvent,
+    let route, context, plan, parentEvent,
         request, start = Date.now(), tempResources = {}, packet, requestId = '', that = this;
 
     //for debug
-    var emitterID, unexecuted, step1, timeoutID;
+    let emitterID, unexecuted, step1, timeoutID;
     if(arguments.length === 2) {
         script = arguments[0];
         func = arguments[1];
@@ -241,7 +241,7 @@ Engine.prototype.doExecute = function() {
     opts.script = script;
 
     // This emitter is used for request-time reporting
-    var emitter = new EventEmitter();
+    const emitter = new EventEmitter();
     // Let the app register handlers
     func(emitter);
 
@@ -256,7 +256,7 @@ Engine.prototype.doExecute = function() {
     assert.ok(script, 'Missing script');
     assert.ok(this.xformers, 'Missing xformers');
 
-    var engineEvent = this.beginEvent({
+    const engineEvent = this.beginEvent({
         parent: parentEvent,
         name: 'engine',
         message: route ? {'route':  route} : {'script' : script},
@@ -273,7 +273,7 @@ Engine.prototype.doExecute = function() {
             emitter.emit(eventTypes.SCRIPT_DONE, packet);
             if(results && requestId) {
                 results.headers = results.headers || {};
-                var name = that.settings['request-id'] ? that.settings['request-id'] : 'request-id';
+                const name = that.settings['request-id'] ? that.settings['request-id'] : 'request-id';
                 results.headers[name] = requestId;
             }
             emitter.emit('end', err, results);
@@ -324,10 +324,15 @@ Engine.prototype.doExecute = function() {
     }
 
     // Initialize the exec state
-    var execState = {};
+    const execState = {};
     // initialize variable assignment by walking through the dependency tree.
     // Unused variable will be treated as orphans and executed eventually.
     function init(statement) {
+        // Add defensive check for undefined statement or missing id
+        if (!statement || typeof statement.id === 'undefined') {
+            return;
+        }
+        
         function scopeInit(statement) {
             switch(statement.type){
                 case 'if':
@@ -365,9 +370,16 @@ Engine.prototype.doExecute = function() {
             count: statement.dependsOn ? statement.dependsOn.length : 0
         };
         _.each(statement.dependsOn, function(dependency) {
-            init(dependency);
+            // Handle both old format (dependency is object) and new format (dependency is ID)
+            if (typeof dependency === 'object') {
+                // Old format - dependency is a statement object
+                init(dependency);
+            } else if (typeof dependency === 'number' && statementMap[dependency]) {
+                // New format - dependency is an ID, look up the statement
+                init(statementMap[dependency]);
+            }
         });
-        var fallback = statement.rhs ? statement.rhs.fallback : statement.fallback;
+        const fallback = statement.rhs ? statement.rhs.fallback : statement.fallback;
         if(fallback) {
             init(fallback);
         }
@@ -376,7 +388,24 @@ Engine.prototype.doExecute = function() {
         }
         scopeInit(statement);
     }
-    init(plan.rhs);
+    // Create a lookup map for statements by ID (for new format)
+    let statementMap = {};
+    if (Array.isArray(plan)) {
+        plan.forEach(statement => {
+            if (statement && typeof statement.id !== 'undefined') {
+                statementMap[statement.id] = statement;
+            }
+        });
+    }
+
+    // Handle both old format (plan.rhs) and new format (array of statements)
+    if (plan.rhs) {
+        // Old format
+        init(plan.rhs);
+    } else if (Array.isArray(plan)) {
+        // New format - plan is an array of statements
+        plan.forEach(statement => init(statement));
+    }
 
     /* Skip assign statement. Make it undefined, and trigger listener
        for if/else and try/catch/finally clause only
@@ -426,9 +455,9 @@ Engine.prototype.doExecute = function() {
             }
 
         }
-        var listeners = [];
+        let listeners = [];
         _.each(statements, function(statement){
-            var tmp = skipVar(statement);
+            const tmp = skipVar(statement);
             if(tmp){
                 listeners.push(tmp);
             }
@@ -445,7 +474,7 @@ Engine.prototype.doExecute = function() {
     function execScope(statement, arg) {
         switch(statement.type) {
             case 'if' :
-                var toskip = arg.skip,
+                const toskip = arg.skip,
                     toexec = arg.exec;
                 skipVarList(toskip);
                 _.each(toexec, function(st) {
@@ -454,7 +483,7 @@ Engine.prototype.doExecute = function() {
                 break;
             case 'try':
                 //arg is a 1:1 mapping to catchClause, only execute the ones that are true
-                var catchzip = _.zip(arg, statement.catchClause)
+                const catchzip = _.zip(arg, statement.catchClause)
                 _.each(catchzip, function(mycatch) {
                     if(mycatch[0]){
                         _.each(mycatch[1].lines, function(line){
@@ -471,7 +500,7 @@ Engine.prototype.doExecute = function() {
         }
     }
 
-    var skip = false;
+    let skip = false;
     /*
     Sweep a statement, execute it only if all its dependencies are done.
     If not, sweep the dependencies first.
@@ -486,8 +515,10 @@ Engine.prototype.doExecute = function() {
             return;
         }
         if(statement.type === 'try'){
-            var dependsDone = _.all(statement.dependsOn, function(tryline){
-                return execState[tryline.id].state === 'statement-success';
+            const dependsDone = _.all(statement.dependsOn, function(tryline){
+                // Handle both old format (tryline is object) and new format (tryline is ID)
+                const trylineId = typeof tryline === 'object' ? tryline.id : tryline;
+                return execState[trylineId].state === 'statement-success';
             });
             if(!dependsDone){
                 //block revisit try from lines in this scope.
@@ -495,16 +526,44 @@ Engine.prototype.doExecute = function() {
             }
         }
         _.each(statement.dependsOn, function(dependency) {
-            if(execState[dependency.id].state === eventTypes.STATEMENT_WAITING) {
+            // Handle both old format (dependency is object) and new format (dependency is ID)
+            let depId, depStatement;
+            if (typeof dependency === 'object') {
+                // Old format
+                depId = dependency.id;
+                depStatement = dependency;
+            } else if (typeof dependency === 'number' && statementMap[dependency]) {
+                // New format
+                depId = dependency;
+                depStatement = statementMap[dependency];
+            } else {
+                return;
+            }
+            
+            if(execState[depId].state === eventTypes.STATEMENT_WAITING) {
                 // Exec the dependency
-                sweep(dependency);
+                sweep(depStatement);
             }
         });
         if(statement.rhs) {
             _.each(statement.rhs.dependsOn, function(dependency) {
-                if(execState[dependency.id].state === eventTypes.STATEMENT_WAITING) {
+                // Handle both old format (dependency is object) and new format (dependency is ID)
+                let depId, depStatement;
+                if (typeof dependency === 'object') {
+                    // Old format
+                    depId = dependency.id;
+                    depStatement = dependency;
+                } else if (typeof dependency === 'number' && statementMap[dependency]) {
+                    // New format
+                    depId = dependency;
+                    depStatement = statementMap[dependency];
+                } else {
+                    return;
+                }
+                
+                if(execState[depId].state === eventTypes.STATEMENT_WAITING) {
                     // Exec the dependency
-                    sweep(dependency);
+                    sweep(depStatement);
                 }
             });
             if(statement.rhs.scope && execState[statement.rhs.scope.id].state === eventTypes.STATEMENT_WAITING) {
@@ -512,8 +571,24 @@ Engine.prototype.doExecute = function() {
             }
         }
 
-        var todo = statement.rhs || statement,
-            scopeDone = !todo.scope || execState[todo.scope.id].state === eventTypes.STATEMENT_SUCCESS || (todo.scope.lock && _.contains(todo.scope.dependsOn, todo));
+        const todo = statement.rhs || statement;
+        
+        // Add defensive check for missing id
+        if (typeof todo.id === 'undefined') {
+            // Handle reference objects by skipping them
+            if (todo.ref) {
+                return; // Skip reference objects silently
+            }
+            return;
+        }
+        
+        const scopeDone = !todo.scope || execState[todo.scope.id].state === eventTypes.STATEMENT_SUCCESS || (todo.scope.lock && _.contains(todo.scope.dependsOn, todo));
+        
+        // Add defensive check for missing execState entry
+        if (!execState[todo.id]) {
+            return;
+        }
+        
         if(execState[todo.id].state === eventTypes.STATEMENT_WAITING &&  // Don't try if in-flight
             execState[todo.id].count === 0 &&
             scopeDone) {
@@ -534,11 +609,11 @@ Engine.prototype.doExecute = function() {
         }
     }
 
-    var execOneStatement = function(statement) {
+    const execOneStatement = function(statement) {
         if (!statement) {
             return;
         }
-        var todo = statement.rhs || statement;
+        const todo = statement.rhs || statement;
         execOne({tables: that.tables,
                 routes: that.routes,
                 config: that.config,
@@ -567,7 +642,7 @@ Engine.prototype.doExecute = function() {
                 else if(results === null || results === undefined
                     || results.body === null || results.body === undefined
                     || todo.type === 'logic' && results === false){
-                    var fallback = statement.rhs ? statement.rhs.fallback : statement.fallback;
+                    const fallback = statement.rhs ? statement.rhs.fallback : statement.fallback;
                     if(fallback) {
                         fallback.fbhold = false;
                         return sweep(fallback);
@@ -602,11 +677,11 @@ Engine.prototype.doExecute = function() {
             }, engineEvent.event);
     }
     // done with all sweep, this is the final wrap up.
-    var fnDone = function(err, results) {
+    const fnDone = function(err, results) {
         execState[plan.rhs.id].state = err ? eventTypes.STATEMENT_ERROR : eventTypes.STATEMENT_SUCCESS;
 
-        var respHeaders = {};
-        var params;
+        const respHeaders = {};
+        let params;
         if(err) {
             engineEvent.end(err);
         }
@@ -622,7 +697,7 @@ Engine.prototype.doExecute = function() {
                     {config: that.config});
                 _.each(plan.route.headers, function (value, name) {
                     // Fill name and value
-                    var _name = jsonfill.fill(name, params);
+                    const _name = jsonfill.fill(name, params);
                     respHeaders[_name] = jsonfill.fill(value, params);
                 });
             }
@@ -638,14 +713,37 @@ Engine.prototype.doExecute = function() {
     }
 
     // Start with the return statement
-    execState[plan.rhs.id].done = fnDone;
-    var next = plan.rhs ? plan.rhs.fallback : plan.fallback;
-    while(next) {
-        execState[next.id].done = fnDone;
-        next = next.fallback;
+    let returnStatement = null;
+    
+    if (plan.rhs) {
+        // Old format
+        returnStatement = plan.rhs;
+    } else if (Array.isArray(plan) && plan.length > 0) {
+        // New format - find the last statement (usually the return statement)
+        returnStatement = plan[plan.length - 1];
+    }
+    
+    if (returnStatement && typeof returnStatement.id !== 'undefined') {
+        execState[returnStatement.id].done = fnDone;
+        
+        // Handle fallback statements
+        let next = returnStatement.fallback;
+        while(next) {
+            if (typeof next.id !== 'undefined') {
+                execState[next.id].done = fnDone;
+            }
+            next = next.fallback;
+        }
     }
 
-    sweep(plan);
+    // Handle both old format (plan is statement) and new format (plan is array)
+    if (plan.rhs) {
+        // Old format
+        sweep(plan);
+    } else if (Array.isArray(plan) && returnStatement) {
+        // New format - start with the return statement
+        sweep(returnStatement);
+    }
 }
 
 /**
@@ -654,7 +752,7 @@ Engine.prototype.doExecute = function() {
  * @deprecated Use execute instead.
  */
 Engine.prototype.exec = function() {
-    var opts, script, cb, events, listeners;
+    let opts, script, cb, events, listeners;
 
     // Two args: (1) the script, (2) a callback that expects an err or result
     if(arguments.length === 2 && _.isString(arguments[0]) && _.isFunction(arguments[1])) {
@@ -708,11 +806,11 @@ Engine.prototype.use = function(type, xformer) {
 }
 
 function execOne(opts, statement, cb, parentEvent) {
-    var packet = {
+    const packet = {
         line: statement.line,
         type: eventTypes.STATEMENT_IN_FLIGHT
     };
-    var start = Date.now();
+    const start = Date.now();
     if(opts.emitter) {
         opts.emitter.emit(eventTypes.STATEMENT_IN_FLIGHT, packet);
     }
@@ -750,7 +848,7 @@ function _execOne(opts, statement, parentEvent, cb) {
         return cb();
     }
 
-    var obj, params, args;
+    let obj, params, args;
     switch(statement.type) {
         case 'create' :
             create.exec(opts, statement, parentEvent, cb);
@@ -775,6 +873,15 @@ function _execOne(opts, statement, parentEvent, cb) {
                 });
                 try {
                     obj = require('./udfs/standard.js')[statement.udf].apply(null, args);
+                    // Handle context assignment and callback for require
+                    opts.context[statement.assign] = obj;
+                    opts.emitter.emit(statement.assign, obj)
+                    const ret = {
+                        body: obj,
+                        headers: {}
+                    };
+                    cb(null, ret);
+                    return; // Don't continue with other paths
                 }
                 catch(e) {
                     console.log(e.stack || e);
@@ -783,20 +890,30 @@ function _execOne(opts, statement, parentEvent, cb) {
                 }else{//assign variable using udf.
                     udf.applyAssign(opts, statement, function(err, results) {
                         if(err) {
-                            cb('udf assignment failed.')
+                            cb(err)
                         }
                         else {
                             if(statement.assign) {
                                 obj = results;
                             }
+                            // Move the context assignment and callback inside the UDF callback
+                            opts.context[statement.assign] = obj;
+                            opts.emitter.emit(statement.assign, obj)
+                            const ret = {
+                                body: obj,
+                                headers: {}
+                            };
+                            cb(null, ret);
                         }
                     });
+                    return; // Don't continue with synchronous execution
                 }
             }
 
+            // Common synchronous execution path for object assignments
             opts.context[statement.assign] = obj;
             opts.emitter.emit(statement.assign, obj)
-            var ret = {
+            const ret = {
                 body: obj,
                 headers: {}
             };
@@ -855,13 +972,13 @@ function _execOne(opts, statement, parentEvent, cb) {
 }
 
 function preReqNotFound(statement, opts, parentEvent) {
-    return (statement.preRequisites || []).length > 0 && !_.all(statement.preRequisites, function (aVar) {
-        var found = opts.context[aVar] != undefined && opts.context[aVar] != null;
+    return (statement.prereq && !_.all(statement.prereq, function(aVar) {
+        const found = opts.context[aVar] != undefined && opts.context[aVar] != null;
         if (!found) {
             opts.logEmitter.emitWarning(parentEvent, "Required parameter not found in context: " + aVar);
         }
         return found;
-    });
+    }));
 }
 
 // Export event types
@@ -869,16 +986,16 @@ Engine.Events = {};
 _.extend(Engine.Events, eventTypes);
 
 // logging aop
-var processingEvent;
+let processingEvent;
 Engine.doProcessing = function(){
     // original function is last
-    var myDoExec = Engine.doProcessing.prototype._innerFunc
-    var parentEvent = null
+    const myDoExec = Engine.doProcessing.prototype._innerFunc
+    let parentEvent = null
     if(arguments.length > 1){
         parentEvent = arguments[1].parentEvent
     }
 
-    var processingEvent = this.beginEvent({
+    processingEvent = this.beginEvent({
         parent: parentEvent,
         name: 'processingEvent',
         message: 'calculates cpu time.',

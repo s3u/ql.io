@@ -6,36 +6,41 @@
         "type": "git",
         "url": "https://github.com/ql-io/ql.io"
     },
-    "engine": {
-        "node":"> 0.8.0"
+    "engines": {
+        "node": ">=18.0.0"
     },
     "main": "lib/engine.js",
+    "scripts": {
+        "test": "jest",
+        "test:coverage": "jest --coverage",
+        "test:watch": "jest --watch"
+    },
     "dependencies": {
-        "winston": "0.6.2",
-        "underscore": "1.3.3",
-        "xml2json": "https://github.com/ql-io/node-xml2json/tarball/master",
-        "ql.io-compiler": "0.8.5",
-        "ql.io-mutable-uri": "0.8.0",
-        "ql.io-uri-template": "0.8.0",
-        "ql.io-str-template": "0.8.0",
-        "JSONPath": "0.9.0",
-        "uri": "0.1.0",
-        "headers": "0.9.6",
-        "mustache": "0.4.0",
-        "ejs": "0.8.0",
-        "async": "0.1.22",
-        "dox": "0.3.1",
-        "node-uuid": "1.3.3",
-        "markdown": "0.4.0",
-        "csv": "0.0.18",
-        "iconv": "1.2.3",
+        "async": "^3.2.6",
         "charlie": "0.0.5",
+        "csv-parser": "^3.2.0",
+        "dox": "0.3.1",
+        "ejs": "^3.1.10",
+        "fast-xml-parser": "^4.5.3",
+        "form-data": "^4.0.5",
+        "headers": "0.9.6",
+        "iconv-lite": "^0.6.3",
+        "jsonpath": "^1.1.1",
+        "marked": "^12.0.2",
+        "mongodb": "^6.21.0",
+        "mustache": "^4.2.0",
+        "ql.io-compiler": "^0.5.10",
+        "ql.io-mutable-uri": "^0.5.0",
+        "ql.io-str-template": "0.8.0",
+        "ql.io-uri-template": "0.8.0",
         "stream-buffers": "https://github.com/idralyuk/node-stream-buffer/tarball/master",
-        "form-data": "0.0.2",
-        "mongodb": "1.2.13"
+        "underscore": "1.13",
+        "uri": "0.1.0",
+        "uuid": "^10.0.0",
+        "winston": "^3.19.0",
+        "ws": "^8.18.3"
     },
     "devDependencies": {
-        "nodeunit": "0.7.4",
-        "ql-unit":""
+        "jest": "^29.0.0"
     }
 }

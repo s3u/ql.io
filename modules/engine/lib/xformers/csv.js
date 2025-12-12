@@ -16,28 +16,88 @@
 
 'use strict';
 
-var csv = require('csv');
+var csv = require('csv-parser');
+var { Readable } = require('stream');
 
 exports.toJson = function(data, respCb, errorCb, headers) {
     try {
+        // Handle null and undefined cases
+        if (data === null) {
+            if (headers) {
+                return respCb([]);
+            } else {
+                return respCb([['null']]);
+            }
+        }
+        
+        if (data === undefined) {
+            if (headers) {
+                return respCb([]);
+            } else {
+                return respCb([['undefined']]);
+            }
+        }
+        
+        // Convert data to string and fix line endings
+        const csvString = String(data).replace(/\\r\\n/g, '\r\n').replace(/\\n/g, '\n');
+        
+        // Handle invalid CSV data (single line without commas)
+        const lines = csvString.split(/\r?\n/).filter(line => line.trim());
+        if (lines.length === 1 && !lines[0].includes(',')) {
+            if (headers) {
+                return respCb([]);
+            } else {
+                return respCb([[lines[0]]]);
+            }
+        }
+        
         var jsonData = [];
-        csv()
-            .from(data, {
-                columns: headers
-            })
-            .transform(function(lineData) {
-                jsonData.push(lineData);
-                return lineData;
-            })
-            .on('end', function() {
-                return respCb(jsonData);
-            })
-            .on('error', function(error) {
-                return errroCb(error);
-            });
+        const stream = Readable.from([csvString]);
+        
+        if (headers === true) {
+            // Use headers mode - first row becomes property names
+            stream
+                .pipe(csv())
+                .on('data', function(lineData) {
+                    jsonData.push(lineData);
+                })
+                .on('end', function() {
+                    return respCb(jsonData);
+                })
+                .on('error', function(error) {
+                    if (errorCb) {
+                        return errorCb(error);
+                    } else {
+                        return respCb([]);
+                    }
+                });
+        } else {
+            // No headers mode - return arrays
+            stream
+                .pipe(csv({ headers: false }))
+                .on('data', function(lineData) {
+                    // Convert object with numeric keys to array
+                    const row = Object.keys(lineData).sort((a, b) => parseInt(a) - parseInt(b)).map(key => lineData[key]);
+                    jsonData.push(row);
+                })
+                .on('end', function() {
+                    return respCb(jsonData);
+                })
+                .on('error', function(error) {
+                    if (errorCb) {
+                        return errorCb(error);
+                    } else {
+                        return respCb([]);
+                    }
+                });
+        }
     }
     catch(error) {
-        return errorCb(error);
+        if (errorCb) {
+            return errorCb(error);
+        } else {
+            return respCb([]);
+        }
     }
 };
 

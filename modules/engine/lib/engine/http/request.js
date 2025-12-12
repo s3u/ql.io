@@ -22,10 +22,10 @@ var _ = require('underscore'),
     eventTypes = require('../event-types.js'),
     http = require('http'),
     https = require('https'),
-    URI = require('uri'),
+    // URI = require('uri'), // Replaced with Node.js built-in URL
     response = require('./response.js'),
     zlib = require('zlib'),
-    uuid = require('node-uuid'),
+    { v4: uuid } = require('uuid'),
     jsonfill = require('../jsonfill.js'),
     FormData = require('form-data'),
     util = require('util'),
@@ -36,20 +36,21 @@ var maxResponseLength;
 exports.send = function(args) {
 
     var client, options;
-    var uri, heirpart, authority, host, port, path, useProxy = false, proxyHost, proxyPort;
+    var url, host, port, path, useProxy = false, proxyHost, proxyPort;
 
     var isTls = args.uri.indexOf('https://') == 0;
-    uri = new URI(args.uri, false);
-
-    heirpart = uri.heirpart();
-    assert.ok(heirpart, 'URI [' + args.uri + '] is invalid');
-    authority = heirpart.authority();
-    assert.ok(authority, 'URI [' + args.uri  + '] is invalid');
-    host = authority.host();
+    
+    try {
+        url = new URL(args.uri);
+    } catch (e) {
+        throw new Error('URI [' + args.uri + '] is invalid: ' + e.message);
+    }
+    
+    host = url.hostname;
     assert.ok(host, 'Host of URI [' + args.uri  + '] is invalid');
-    port = authority.port() || (isTls ? 443 : 80);
+    port = url.port || (isTls ? 443 : 80);
     assert.ok(port, 'Port of URI [' + args.uri  + '] is invalid');
-    path = (heirpart.path().value || '') + (uri.querystring() || '');
+    path = url.pathname + (url.search || '');
 
     assert.ok(args.name, 'table name not specified');
 
@@ -73,10 +74,12 @@ exports.send = function(args) {
     options = {
         host: useProxy ? proxyHost : host,
         port: useProxy? proxyPort : port,
-        path: useProxy? uri.scheme() + '//' + host + path : path,
+        path: useProxy? url.protocol + '//' + host + path : path,
         method: args.method,
         headers: args.headers
     };
+    
+
     client = isTls ? https : http;
     // Avoid request backlog on any given socket.
     client.globalAgent.maxSockets = 1000;
@@ -152,7 +155,7 @@ function sendHttpRequest(client, options, args, start, timings, reqStart, key, c
     if (args.parts && args.statement.parts) {
         var form = new FormData();
         if (args.body) {
-            form.append('body', new Buffer(args.body));
+            form.append('body', Buffer.from(args.body));
         }
 
         var tmp_parts = { 'req' : { 'parts' : args.parts }};
@@ -165,7 +168,9 @@ function sendHttpRequest(client, options, args, start, timings, reqStart, key, c
             }
         });
 
-        _.extend(options.headers, form.getCustomHeaders(args.resource.body.type));
+        // Fix for form-data v4.x API change
+        const formHeaders = form.getHeaders ? form.getHeaders() : form.getCustomHeaders(args.resource.body.type);
+        _.extend(options.headers, formHeaders);
     }
 
     var followRedirects = true, maxRedirects = 10;
@@ -216,16 +221,24 @@ function sendHttpRequest(client, options, args, start, timings, reqStart, key, c
                         return args.httpReqTx.cb(err);
                     }
 
-                    var location = new URI(res.headers.location);
-
-                    if (location.isAbsolute()) {
-                        options.host = location.heirpart().authority().host();
-                        options.port = location.heirpart().authority().port();
-                    } else {
-                        location = new URI(args.uri);
-                        location = location.resolveReference(res.headers.location);
+                    var location;
+                    try {
+                        location = new URL(res.headers.location);
+                        // Absolute URL
+                        options.host = location.hostname;
+                        options.port = location.port || (location.protocol === 'https:' ? 443 : 80);
+                        options.path = location.pathname + (location.search || '');
+                    } catch (e) {
+                        // Relative URL - resolve against original URL
+                        try {
+                            location = new URL(res.headers.location, args.uri);
+                            options.host = location.hostname;
+                            options.port = location.port || (location.protocol === 'https:' ? 443 : 80);
+                            options.path = location.pathname + (location.search || '');
+                        } catch (e2) {
+                            throw new Error('Invalid redirect location: ' + res.headers.location);
+                        }
                     }
-                    options.path = location.heirpart().path();
 
                     args.logEmitter.emitEvent(args.httpReqTx.event, {
                         redirects: redirects,
