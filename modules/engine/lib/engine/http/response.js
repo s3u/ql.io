@@ -113,32 +113,53 @@ exports.exec = function(timings, reqStart, args, uniqueId, res, start, result, o
 }
 
 function jsonify(table, respData, mediaType, headers, xformers, respCb, errorCb) {
+    // Protect against double callback invocation
+    let callbackInvoked = false;
+    
+    const safeRespCb = function(data) {
+        if (callbackInvoked) {
+            return; // Silently ignore subsequent calls
+        }
+        callbackInvoked = true;
+        return respCb(data);
+    };
+    
+    const safeErrorCb = function(error) {
+        if (callbackInvoked) {
+            return; // Silently ignore subsequent calls
+        }
+        callbackInvoked = true;
+        return errorCb(error);
+    };
 
     if (!respData || /^\s*$/.test(respData)) {
-        respCb({});
+        safeRespCb({});
     }
     else if(xformers[table]) {
-        xformers[table].toJson(respData, respCb, errorCb, headers);
+        xformers[table].toJson(respData, safeRespCb, safeErrorCb, headers);
     }
     else if(mediaType.subtype === 'xml' || /\+xml$/.test(mediaType.subtype)) {
-        xformers['xml'].toJson(respData, respCb, errorCb, headers);
+        xformers['xml'].toJson(respData, safeRespCb, safeErrorCb, headers);
     }
     else if(mediaType.subtype === 'json') {
-        xformers['json'].toJson(respData, respCb, errorCb, headers);
+        xformers['json'].toJson(respData, safeRespCb, safeErrorCb, headers);
     }
     else if(mediaType.subtype === 'csv') {
-        xformers['csv'].toJson(respData, respCb, errorCb,
+        xformers['csv'].toJson(respData, safeRespCb, safeErrorCb,
             (mediaType.params && mediaType.params.header != undefined));
     }
     else if(mediaType.type === 'text') {
         // Try JSON first
-        xformers['json'].toJson(respData, respCb, function() {
-            // if error Try XML
-            xformers['xml'].toJson(respData, respCb, errorCb);
+        xformers['json'].toJson(respData, safeRespCb, function(jsonError) {
+            // Only try XML if callback hasn't been invoked yet
+            if (!callbackInvoked) {
+                // if JSON parsing fails, try XML
+                xformers['xml'].toJson(respData, safeRespCb, safeErrorCb);
+            }
         });
     }
     else {
-        errorCb({message:"No transformer available", type:mediaType.type, subType:mediaType.subtype})
+        safeErrorCb({message:"No transformer available", type:mediaType.type, subType:mediaType.subtype})
     }
 }
 
