@@ -1,29 +1,51 @@
 #!/bin/bash
 
 # ql.io Server Startup Script
-# This script starts the ql.io server with the web console
+# Choose between modern React console or legacy console
 
-echo "🚀 Starting ql.io server..."
-echo "📁 Tables directory: $PWD/tables/"
-echo "🛣️  Routes directory: $PWD/routes/"
-echo "⚙️  Config file: $PWD/config/dev.json"
+echo "🚀 ql.io Server Startup"
 echo ""
 
-# Ensure directories exist
-mkdir -p tables routes logs pids
-
-# Start the server
-echo "🌐 Starting server on http://localhost:3000"
-echo "🖥️  Web console available at: http://localhost:3000/console"
-echo "📊 Monitoring available at: http://localhost:3001"
-echo ""
-echo "Press Ctrl+C to stop the server"
-echo "----------------------------------------"
-
-node modules/app/bin/ql.io-app.js \
-  --tables $PWD/tables/ \
-  --routes $PWD/routes/ \
-  --config $PWD/config/dev.json \
-  --port 3000 \
-  --monPort 3001 \
-  $@
+# Check if modern console is available
+if [ -d "console-ui" ]; then
+    echo "📱 Choose your console experience:"
+    echo ""
+    echo "1️⃣  Modern Console (React + TypeScript) - RECOMMENDED"
+    echo "   ✨ Modern UI with syntax highlighting"
+    echo "   🚀 Fast development server"
+    echo "   📊 Better query results visualization"
+    echo ""
+    echo "2️⃣  Legacy Console (Traditional)"
+    echo "   🔧 Integrated server-side console"
+    echo "   📋 Classic ql.io interface"
+    echo ""
+    
+    # Check for command line argument
+    if [ "$1" = "--legacy" ] || [ "$1" = "-l" ]; then
+        CHOICE="2"
+        echo "🔧 Starting legacy console (--legacy flag detected)..."
+    elif [ "$1" = "--modern" ] || [ "$1" = "-m" ]; then
+        CHOICE="1"
+        echo "✨ Starting modern console (--modern flag detected)..."
+    else
+        echo -n "Enter your choice (1 or 2) [default: 1]: "
+        read CHOICE
+        CHOICE=${CHOICE:-1}
+    fi
+    
+    echo ""
+    
+    if [ "$CHOICE" = "1" ]; then
+        echo "🎨 Starting Modern Console..."
+        exec bin/start-modern.sh
+    elif [ "$CHOICE" = "2" ]; then
+        echo "🔧 Starting Legacy Console..."
+        exec bin/start-legacy.sh
+    else
+        echo "❌ Invalid choice. Starting Modern Console (default)..."
+        exec bin/start-modern.sh
+    fi
+else
+    echo "⚠️  Modern console not available, starting legacy console..."
+    exec bin/start-legacy.sh
+fi

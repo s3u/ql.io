@@ -6,22 +6,11 @@
 echo "🚀 Starting ql.io Modern Console..."
 echo ""
 
-# Check if we're on the right branch
-CURRENT_BRANCH=$(git branch --show-current)
-if [ "$CURRENT_BRANCH" != "console-modern" ]; then
-    echo "⚠️  Switching to console-modern branch..."
-    git checkout console-modern
-    if [ $? -ne 0 ]; then
-        echo "❌ Failed to switch to console-modern branch"
-        echo "💡 Make sure the branch exists: git branch -a"
-        exit 1
-    fi
-fi
-
 # Check if console-ui directory exists
 if [ ! -d "console-ui" ]; then
     echo "❌ console-ui directory not found"
-    echo "💡 Make sure you're on the console-modern branch"
+    echo "💡 The modern console UI is not available in this repository"
+    echo "💡 Make sure you have the complete ql.io repository with console-ui/"
     exit 1
 fi
 
