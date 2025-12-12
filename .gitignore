@@ -18,3 +18,8 @@ modernization/backups/
 
 # Modern console build output
 console-ui/dist/
+
+# Test coverage reports (generated artifacts)
+coverage/
+*/coverage/
+**/coverage/
