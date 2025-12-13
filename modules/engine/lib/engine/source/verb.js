@@ -29,8 +29,7 @@ var assert = require('assert'),
     request = require('../http/request.js'),
     _util = require('../util.js'),
     iconv = require('iconv-lite'),
-    HttpConnector = require('./httpConnector.js'),
-    mongoConnector = require('./mongoConnector.js');
+    HttpConnector = require('./httpConnector.js');
 
 var Verb = module.exports = function(table, statement, type, bag, path, conn) {
     this.table = table;
@@ -39,9 +38,6 @@ var Verb = module.exports = function(table, statement, type, bag, path, conn) {
     //this.connector = conn;
     this.expects = statement.expect;
     switch(conn){
-        case 'mongodb':
-            this.connector = new mongoConnector(table, statement, type, bag, path);
-            break;
         case 'http' :
             this.connector = new HttpConnector(table, statement, type, bag, path);
             break;
