@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-var _ = require('underscore');
+const _ = require('underscore');
 
-// Fill params from given args. In stead of merging params, simply wire up a __proto__ chain
+// Fill params from given args. Instead of merging params, simply wire up a __proto__ chain
 exports.prepareParams = function() {
-    var params = {};
-    var ref, arg;
-    for(var i = 0; i < arguments.length; i++) {
+    const params = {};
+    let ref, arg;
+    for(let i = 0; i < arguments.length; i++) {
         arg = arguments[i];
         if(arg === undefined) {
             continue;
@@ -32,7 +32,7 @@ exports.prepareParams = function() {
         else {
             // Delete undefined properties as an undefined will override a defined in the __proto__
             // chain
-            _.each(arg, function(v, p) {
+            _.each(arg, (v, p) => {
                 if(v === undefined) delete arg[p];
             });
             ref.__proto__ = arg;
@@ -43,24 +43,24 @@ exports.prepareParams = function() {
 }
 
 
-var maxRequests;
+let maxRequests;
 exports.getMaxRequests = function(config, logEmitter) {
-    if (config && config.maxNestedRequests) {
+    if (config?.maxNestedRequests) {
         maxRequests = config.maxNestedRequests;
     }
 
     if (!maxRequests) {
         maxRequests = 50;
-        logEmitter.emitWarning('config.maxNestedRequests is undefined! Defaulting to ' + maxRequests);
+        logEmitter.emitWarning(`config.maxNestedRequests is undefined! Defaulting to ${maxRequests}`);
     }
 
     return maxRequests;
 }
 
 
-function isDup(obj, dupGuard) {
+const isDup = (obj, dupGuard) => {
     if(typeof obj === "object") {
-        if(-1 !== dupGuard.indexOf(obj)) {
+        if(dupGuard.includes(obj)) {
             return true;
         }
         dupGuard.push(obj);
@@ -68,9 +68,8 @@ function isDup(obj, dupGuard) {
     return false;
 }
 
-var toNormalizedSting = exports.toNormalizedSting = function(obj, dupGuard) {
-    dupGuard = dupGuard || [];
-    var ret = '';
+const toNormalizedSting = exports.toNormalizedSting = function(obj, dupGuard = []) {
+    let ret = '';
     if(_.isNull(obj) ||
         _.isNaN(obj) ||
         _.isBoolean(obj) ||
@@ -88,98 +87,102 @@ var toNormalizedSting = exports.toNormalizedSting = function(obj, dupGuard) {
     else if (_.isArray(obj)) {
         obj.sort();
         ret = JSON.stringify(_.chain(obj)
-            .map(function (ele) {
-                return isDup(ele, dupGuard) ? '<circ>' : toNormalizedSting(ele, dupGuard);
-            })
-            .sortBy(function (ele) {
-                return ele;
-            })
+            .map(ele => isDup(ele, dupGuard) ? '<circ>' : toNormalizedSting(ele, dupGuard))
+            .sortBy(ele => ele)
             .value());
     }
-    else if(typeof obj == "object"){
-        ret =  JSON.stringify(isDup(obj,dupGuard) ? '<circ>' :
+    else if(typeof obj === "object"){
+        ret = JSON.stringify(isDup(obj, dupGuard) ? '<circ>' :
             _.chain(obj)
                 .keys()
-                .sortBy(function(ele){
-                    return ele;
-                })
-                .reduce(function(memo,key){
+                .sortBy(ele => ele)
+                .reduce((memo, key) => {
                     memo[key] = toNormalizedSting(obj[key], dupGuard);
                     return memo;
-                },{})
+                }, {})
                 .value());
     }
 
     return ret;
 }
 
-var getCache = exports.getCache = function (config, cache, engine, errorCb) {
-    errorCb = errorCb || function(e) {};
-
-    if(!cache && config.cache && config.cache.impl){
-        var cacheConfig = config.cache.options;
-        var newCache;
+const getCache = exports.getCache = function (config, cache, engine, errorCb = () => {}) {
+    if(!cache && config?.cache?.impl){
+        const cacheConfig = config.cache.options;
+        let newCache;
         try {
-            if(cacheConfig == undefined){
-                newCache = new (cacheRequire(config.cache.impl))();
-            }
-            else {
-                newCache = new (cacheRequire(config.cache.impl))(cacheConfig);
-            }
+            const CacheConstructor = cacheRequire(config.cache.impl);
+            newCache = cacheConfig === undefined 
+                ? new CacheConstructor()
+                : new CacheConstructor(cacheConfig);
+                
             if(_.isFunction(newCache.start)){
                 newCache.start();
             }
             cache = newCache;
         }
         catch(e){
-            errorCb({cache:config.cache,
+            errorCb({
+                cache: config.cache,
                 curDir: __dirname,
-                error:e});
+                error: e
+            });
         }
     }
 
     if(cache) {
-        cache.on('start', function(event){
-            engine.emitEvent({clazz: 'info', name: 'cacheStart'}, JSON.stringify({name:'cacheStart', event:event}));
-        });
-        cache.on('end', function(event){
-            engine.emitEvent({clazz: 'info', name: 'cacheEnd'}, JSON.stringify({name:'cacheEnd', event:event}));
-        });
-        cache.on('new', function(event){
-            engine.emitEvent({clazz: 'info', name: 'cacheNew'}, JSON.stringify({name:'cacheNew', event:event}));
-        });
-        cache.on('hit', function(event){
-            engine.emitEvent({clazz: 'info', name: 'cacheHit'}, JSON.stringify({name:'cacheHit', event:event}));
-        });
-        cache.on('miss', function(event){
-            engine.emitEvent({clazz: 'info', name: 'cacheMiss'}, JSON.stringify({name:'cacheMiss', event:event}));
-        });
-        cache.on('heartbeat', function(event){
-            engine.emitHeartBeat(JSON.stringify({name:'cacheHeartBeat', event:event}));
-        });
-        cache.on('info', function(event){
-            engine.emitEvent({clazz: 'info', name: 'cacheInfo'}, JSON.stringify({name:'cacheInfo', event:event}));
-        });
-        cache.on('error', function(event){
-            engine.emitError({clazz: 'error', name: 'cacheError'}, JSON.stringify({name:'cacheError', event:event}));
+        const eventHandlers = {
+            start: event => engine.emitEvent(
+                {clazz: 'info', name: 'cacheStart'}, 
+                JSON.stringify({name: 'cacheStart', event})
+            ),
+            end: event => engine.emitEvent(
+                {clazz: 'info', name: 'cacheEnd'}, 
+                JSON.stringify({name: 'cacheEnd', event})
+            ),
+            new: event => engine.emitEvent(
+                {clazz: 'info', name: 'cacheNew'}, 
+                JSON.stringify({name: 'cacheNew', event})
+            ),
+            hit: event => engine.emitEvent(
+                {clazz: 'info', name: 'cacheHit'}, 
+                JSON.stringify({name: 'cacheHit', event})
+            ),
+            miss: event => engine.emitEvent(
+                {clazz: 'info', name: 'cacheMiss'}, 
+                JSON.stringify({name: 'cacheMiss', event})
+            ),
+            heartbeat: event => engine.emitHeartBeat(
+                JSON.stringify({name: 'cacheHeartBeat', event})
+            ),
+            info: event => engine.emitEvent(
+                {clazz: 'info', name: 'cacheInfo'}, 
+                JSON.stringify({name: 'cacheInfo', event})
+            ),
+            error: event => engine.emitError(
+                {clazz: 'error', name: 'cacheError'}, 
+                JSON.stringify({name: 'cacheError', event})
+            )
+        };
+
+        Object.entries(eventHandlers).forEach(([eventName, handler]) => {
+            cache.on(eventName, handler);
         });
     }
 
     return cache;
 }
 
-function cacheRequire(name){
-    var module;
-    try{
-        module = require(name);
+const cacheRequire = (name) => {
+    try {
+        return require(name);
     }
-    catch(e){
+    catch(e) {
         try {
-            module = require(process.cwd() + '/node_modules/' + name)
+            return require(`${process.cwd()}/node_modules/${name}`);
         }
-        catch(ex){
+        catch(ex) {
             throw e;
         }
     }
-    return module;
 }

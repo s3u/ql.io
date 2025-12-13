@@ -13,58 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var fs = require('fs'),
-    assert = require('assert');
+const fs = require('fs');
+const assert = require('assert');
+
 exports.load = function (opts) {
-    var rootdir = opts.path;
-    var logEmitter = opts.logEmitter;
+    const { path: rootdir, logEmitter } = opts;
 
     if(!rootdir) {
         return [];
     }
-    var connectors = {};
+    const connectors = {};
 
-    logEmitter.emitEvent('Loading connectors from ' + rootdir);
+    logEmitter.emitEvent(`Loading connectors from ${rootdir}`);
     loadInternal(rootdir, '', logEmitter, connectors);
     return connectors;
-
 };
 
-function loadInternal(path, prefix, logEmitter, connectors) {
+const loadInternal = (path, prefix, logEmitter, connectors) => {
     assert.ok(path, 'path should not be null');
     assert.ok(connectors, 'connectors should not be null');
 
-    var stats, paths;
-    path = path.charAt(path.length - 1) == '/' ? path : path + '/';
+    const normalizedPath = path.endsWith('/') ? path : `${path}/`;
+    let paths;
+    
     try {
-        paths = fs.readdirSync(path);
+        paths = fs.readdirSync(normalizedPath);
     }
     catch(e) {
-        logEmitter.emitError('Unable to load connectors from ' + path);
+        logEmitter.emitError(`Unable to load connectors from ${normalizedPath}`);
         return;
     }
 
-    paths.forEach(function(filename) {
-        stats = fs.statSync(path + filename);
+    paths.forEach(filename => {
+        const stats = fs.statSync(normalizedPath + filename);
         /*if(stats.isDirectory()) {
-            loadInternal(path + filename,
+            loadInternal(normalizedPath + filename,
                 prefix.length > 0 ? prefix + '.' + filename : filename,
                 logEmitter, connectors);
         }
         else */if(stats.isFile() && /\.js$/.test(filename)) {
-           loadOne(path+filename,connectors)
-
+           loadOne(normalizedPath + filename, connectors);
         }
     });
 }
 
-function loadOne(filepath, connectors){
-    try{
-        var candidate = require(filepath);
-        var connectorName = candidate.connectorName;
-        if(connectorName){
-            connectors[connectorName] = filepath
+const loadOne = (filepath, connectors) => {
+    try {
+        const candidate = require(filepath);
+        const { connectorName } = candidate;
+        if(connectorName) {
+            connectors[connectorName] = filepath;
         }
-    }catch(e){}
-
+    } catch(e) {
+        // Silently ignore errors when loading individual connectors
+    }
 }

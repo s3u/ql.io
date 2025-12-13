@@ -20,23 +20,24 @@
 
 'use strict';
 
-var fs = require('fs');
+const fs = require('fs');
 
 exports.load = function(opts) {
     opts = opts || {};
-    var logEmitter = opts.logEmitter;
-    var file = opts.config, text;
-
+    const { logEmitter, config: file } = opts;
+    
     if(!file) {
         return {};
     }
+    
+    let text;
     try {
         // Load the file
-        logEmitter.emitEvent('Loading config from ' + opts.config);
+        logEmitter.emitEvent(`Loading config from ${file}`);
         text = fs.readFileSync(file, 'UTF-8');
     }
     catch (e) {
-        logEmitter.emitError('Unable to load config from ' + file);
+        logEmitter.emitError(`Unable to load config from ${file}`);
         return {};
     }
 
@@ -44,7 +45,7 @@ exports.load = function(opts) {
         return JSON.parse(text);
     }
     catch (e) {
-        logEmitter.emitError('Error loading config file: ' + file);
+        logEmitter.emitError(`Error loading config file: ${file}`);
         console.log(e.stack || e);
         return {};
     }
