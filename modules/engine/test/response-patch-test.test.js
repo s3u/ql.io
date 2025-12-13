@@ -1,5 +1,4 @@
 const Engine = require('../lib/engine');
-const _ = require('underscore');
 describe('response patch test Tests', () => {
     let engine;
     let server;
@@ -22,60 +21,54 @@ describe('response patch test Tests', () => {
     });
 
     test('response-patch-test', async () => {
+        // Start a mock server to serve the JSON file
+        const http = require('http');
+        const fs = require('fs');
+        server = http.createServer(function(req, res) {
+            const file = __dirname + '/mock' + req.url;
+            try {
+                const stat = fs.statSync(file);
+                res.writeHead(200, {
+                    'Content-Type': 'application/json',
+                    'Content-Length': stat.size
+                });
+                fs.createReadStream(file).pipe(res);
+            } catch (e) {
+                res.writeHead(404);
+                res.end('Not found');
+            }
+        });
+        
+        await new Promise((resolve) => {
+            server.listen(3000, resolve);
+        });
+        
+        const script = fs.readFileSync(__dirname + '/mock/response-patch.ql', 'UTF-8');
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var server = http.createServer(function(req, res) {
-            //             var file = __dirname + '/mock/' + req.url;
-            //             var stat = fs.statSync(file);
-            //             res.writeHead(200, {
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+            engine.execute(script, function(emitter) {
+                emitter.on('end', function(err, result) {
+                    if(err) {
+                        reject(new Error('Response patch test failed: ' + (err.stack || err)));
                     }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
+                    else {
+                        try {
+                            expect(result).toBeDefined();
+                            expect(result.body).toBeDefined();
+                            // The response patch should have modified the response structure
+                            // Verify that we got an array of items (JSONPath extraction result)
+                            expect(Array.isArray(result.body)).toBe(true);
+                            if (result.body.length > 0 && Array.isArray(result.body[0])) {
+                                // Should have extracted items from the response
+                                expect(result.body[0].length).toBeGreaterThan(0);
+                            }
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
                     }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
     }, 15000);
 });

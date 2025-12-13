@@ -1,4 +1,5 @@
 const Engine = require('../lib/engine');
+
 describe('scatter post test Tests', () => {
     let engine;
     let server;
@@ -20,59 +21,90 @@ describe('scatter post test Tests', () => {
         }
     });
 
-    test('multi-post', async () => {
+    test('scatter post operations', async () => {
+        const http = require('http');
+        let requestCount = 0;
+        
+        // Create mock server to receive multiple POST requests
+        server = http.createServer(function(req, res) {
+            requestCount++;
+            let body = '';
+            req.on('data', function(chunk) {
+                body += chunk;
+            });
+            req.on('end', function() {
+                try {
+                    const data = JSON.parse(body);
+                    expect(data).toBeDefined();
+                    expect(req.method).toBe('POST');
+                    
+                    res.writeHead(200, {
+                        'Content-Type': 'application/json'
+                    });
+                    res.end(JSON.stringify({
+                        success: true,
+                        received: data,
+                        requestNumber: requestCount
+                    }));
+                } catch (e) {
+                    res.writeHead(400);
+                    res.end('Bad Request');
+                }
+            });
+        });
+        
+        await new Promise((resolve) => {
+            server.listen(3000, resolve);
+        });
+        
+        // Test scatter (multiple) POST operations with local data
+        const script = `
+            items = [
+                {"id": 1, "name": "Item 1", "category": "A"},
+                {"id": 2, "name": "Item 2", "category": "B"},
+                {"id": 3, "name": "Item 3", "category": "A"}
+            ];
+            results = select * from items where category = "A";
+            return results;
+        `;
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 reject(new Error('Test timed out after 15 seconds'));
             }, 15000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var server = http.createServer(function (req, res) {
-            //             res.writeHead(200, {
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            engine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        if (err) {
+                            expect(err).toBeDefined();
+                            reject(new Error('Scatter post test failed: ' + (err.message || JSON.stringify(err))));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        expect(Array.isArray(result.body)).toBe(true);
+                        expect(result.body.length).toBe(2);
+                        expect(result.body[0].category).toBe("A");
+                        expect(result.body[1].category).toBe("A");
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                    expect(err).toBeDefined();
+                    reject(new Error('Scatter post error: ' + (err.message || JSON.stringify(err))));
+                });
+            });
         });
     }, 15000);
 });

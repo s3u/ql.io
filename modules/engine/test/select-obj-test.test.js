@@ -1,4 +1,5 @@
 const Engine = require('../lib/engine');
+
 describe('select obj test Tests', () => {
     let engine;
     let server;
@@ -20,252 +21,207 @@ describe('select obj test Tests', () => {
         }
     });
 
-    test('select-star-from-obj', async () => {
+    test('should select all fields from object', async () => {
+        const script = `
+            foo = {
+                "name": "test-object",
+                "id": 123,
+                "active": true
+            };
+            
+            return select * from foo;
+        `;
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var context, q;
-            //         context = {
-            //             foo : {
+            engine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
+                    clearTimeout(timeout);
+                    
+                    try {
+                        if (err) {
+                            reject(new Error('Select star from object test failed: ' + err.message));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        expect(result.body.name).toBe('test-object');
+                        expect(result.body.id).toBe(123);
+                        expect(result.body.active).toBe(true);
+                        
+                        resolve();
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+                
+                emitter.on('error', function(err) {
+                    clearTimeout(timeout);
+                    reject(new Error('Select star from object error: ' + err.message));
+                });
+            });
+        });
+    });
+    test('should select specific fields from object', async () => {
+        const script = `
+            foo = {
+                "name": "test-object",
+                "id": 123,
+                "active": true,
+                "description": "This is a test object"
+            };
             
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            return select name, id from foo;
+        `;
+        
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
+            
+            engine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        if (err) {
+                            reject(new Error('Select some from object test failed: ' + err.message));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        
+                        // When selecting specific fields, result is returned as array
+                        expect(Array.isArray(result.body)).toBe(true);
+                        expect(result.body).toEqual([['test-object', 123]]);
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
+                    reject(new Error('Select some from object error: ' + err.message));
+                });
+            });
+        });
+    });
+    test('should select one field from joined arrays', async () => {
+        const script = `
+            a1 = [{
+                "name": "Name-A",
+                "ns": "n1"
+            }, {
+                "name": "Name-B",
+                "ns": "n2"
+            }, {
+                "name": "Name-C",
+                "ns": "n3"
+            }];
+            
+            a2 = [{
+                "name": "Name-A",
+                "ns": "n1"
+            }, {
+                "name": "Name-C",
+                "ns": "n2"
+            }];
+            
+            return select a1.name from a1 as a1, a2 as a2 where a1.name = a2.name;
+        `;
+        
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
+            
+            engine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
+                    clearTimeout(timeout);
+                    
                     try {
-                        expect(actual).toBe(expected);
+                        if (err) {
+                            reject(new Error('Select join one field test failed: ' + err.message));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        expect(result.body).toEqual([['Name-A'], ['Name-C']]);
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
+                        reject(e);
                     }
-                },
-                deepEqual: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
+                    reject(new Error('Select join one field error: ' + err.message));
+                });
+            });
+        });
+    });
+    test('should handle indexed references in select', async () => {
+        const script = `
+            a = {
+                "items": ["item1", "item2", "item3"],
+                "metadata": {
+                    "count": 3,
+                    "type": "array"
                 }
             };
             
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
-        });
-    }, 15000);
-    test('select-some-from-obj', async () => {
+            return select a.items[0], a.metadata.count from a;
+        `;
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var context, q;
-            //         context = {
-            //             foo : {
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            engine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        if (err) {
+                            reject(new Error('Select indexed ref test failed: ' + err.message));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        
+                        // Should access indexed and nested properties (returns as array)
+                        expect(result.body).toEqual([['item1', 3]]);
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                    reject(new Error('Select indexed ref error: ' + err.message));
+                });
+            });
         });
-    }, 15000);
-    test('select-join-one-field', async () => {
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var q = 'a1 = [{ \
-            //             "name": "Name-A",\
-            //             "ns": "n1"\
-            //           },\
-            //           {\
-            //             "name": "Name-B",\
-            //             "ns": "n2" \
-            //           },\
-            //           {\
-            //             "name": "Name-C",\
-            //             "ns": "n3"\
-            //           }];\
-            //         a2 = [{\
-            //             "name": "Name-A",\
-            //             "ns": "n1"\
-            //           },\
-            //           {\
-            //             "name": "Name-C",\
-            //             "ns": "n2"\
-            //           }];\
-            //         return select a1.name from a1 as a1, a2 as a2 where a1.name = a2.name;';
-            // 
-            //         engine.execute(q, function(emitter) {
-            //             emitter.on('end', function(err, results) {
-            //                 test.deepEqual(results.body, [ [ 'Name-A' ], [ 'Name-C' ] ]);
-            //                 test.done();
-            //             })
-            //         });
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
-                    }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
-        });
-    }, 15000);
-    test('select-indexed-ref', async () => {
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var q = "a = {\
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
-                    }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
-        });
-    }, 15000);
+    });
 });

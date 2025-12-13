@@ -1,5 +1,4 @@
 const Engine = require('../lib/engine');
-const _ = require('underscore');
 describe('where udf test Tests', () => {
     let engine;
     let server;
@@ -22,863 +21,376 @@ describe('where udf test Tests', () => {
     });
 
     test('missing-udf', async () => {
+        const script = 'a1 = [{"name": "Brand-A", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
+                             {"name": "Brand-B", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
+                             {"name": "Brand-C", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
+                       return select a1.name, a1.keys from a1 where toUpper()';
+        
+        // Must fail since the UDF is not defined
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var script = 'a1 = [{"name": "Brand-A", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
-            //                             {"name": "Brand-B", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
-            //                             {"name": "Brand-C", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
-            //                       return select a1.name, a1.keys from a1 where toUpper()';
-            //         // Must fail since the UDF is not defined
-            //         engine.execute(script, function(emitter) {
-            //             emitter.on('end', function(err, results) {
-            //                 if(err) {
-            //                     test.ok(true);
-            //                 }
-            //                 else {
-            //                     test.ok(false);
-            //                 }
-            //                 test.done();
-            //             })
-            //         });
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
+            engine.execute(script, function(emitter) {
+                emitter.on('end', function(err, results) {
                     try {
-                        expect(condition).toBe(true);
-                        resolve();
+                        if(err) {
+                            // Expected error due to missing UDF
+                            expect(true).toBe(true);
+                            resolve();
+                        }
+                        else {
+                            reject(new Error('Expected error for missing UDF but got success'));
+                        }
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
     }, 15000);
     test('no-args', async () => {
+        const script = 'u = require("./test/udfs/upper.js");\
+                       a1 = [{"name": "Brand-A", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
+                                     {"name": "Brand-B", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
+                                     {"name": "Brand-C", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
+                       return select name, keys from a1 where u.toUpper()';
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var script = 'u = require("./test/udfs/upper.js");\
-            //                       a1 = [{"name": "Brand-A", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
-            //                                     {"name": "Brand-B", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
-            //                                     {"name": "Brand-C", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
-            //                       return select name, keys from a1 where u.toUpper()';
-            //         engine.execute(script, function (emitter) {
-            //             emitter.on('end', function (err, results) {
-            //                 if(err) {
-            //                     console.log(err.stack || err);
-            //                     test.ok(false);
-            //                 }
-            //                 else {
-            //                     test.equals(results.body[0][0], 'BRAND-A');
-            //                     test.equals(results.body[1][0], 'BRAND-B');
-            //                     test.equals(results.body[2][0], 'BRAND-C');
-            //                 }
-            //             });
-            //             test.done();
-            //         });
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+            engine.execute(script, function (emitter) {
+                emitter.on('end', function (err, results) {
+                    if(err) {
+                        console.log(err.stack || err);
+                        reject(new Error('UDF execution failed: ' + (err.stack || err)));
                     }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
+                    else {
+                        try {
+                            expect(results.body).toBeDefined();
+                            expect(results.body[0][0]).toBe('BRAND-A');
+                            expect(results.body[1][0]).toBe('BRAND-B');
+                            expect(results.body[2][0]).toBe('BRAND-C');
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
                     }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
     }, 15000);
     test('literal-args-str', async () => {
+        const script = 'u = require("./test/udfs/args.js");\
+                       a1 = [{"name": "Brand-A", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
+                             {"name": "Brand-B", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
+                             {"name": "Brand-C", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
+                       return select name, keys from a1 where u.echo("one", "two")';
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var script = 'u = require("./test/udfs/args.js");\
-            //                       a1 = [{"name": "Brand-A", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
-            //                             {"name": "Brand-B", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
-            //                             {"name": "Brand-C", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
-            //                       return select name, keys from a1 where u.echo("one", "two")';
-            //         engine.execute(script, function (emitter) {
-            //             emitter.on('end', function (err, results) {
-            //                 if(err) {
-            //                     console.log(err.stack || err);
-            //                     test.ok(false);
-            //                     test.done();
-            //                 }
-            //                 else {
-            //                     for(var i = 0; i < 3; i++) {
-            //                         test.equals(results.body[i][0], 'one');
-            //                         test.equals(results.body[i][1], 'two');
-            //                     }
-            //                     test.done();
-            //                 }
-            //             })
-            //         });
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+            engine.execute(script, function (emitter) {
+                emitter.on('end', function (err, results) {
+                    if(err) {
+                        console.log(err.stack || err);
+                        reject(new Error('UDF execution failed: ' + (err.stack || err)));
                     }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
+                    else {
+                        try {
+                            expect(results.body).toBeDefined();
+                            for(let i = 0; i < 3; i++) {
+                                expect(results.body[i][0]).toBe('one');
+                                expect(results.body[i][1]).toBe('two');
+                            }
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
                     }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
     }, 15000);
     test('literal-args-mixed', async () => {
+        const script = 'u = require("./test/udfs/args.js");\
+                       a1 = [{"name": "Brand-A", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
+                             {"name": "Brand-B", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
+                             {"name": "Brand-C", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
+                       return select name, keys from a1 where u.echo("one", 2, 1.2345, false, true, {"name":"value"})';
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var script = 'u = require("./test/udfs/args.js");\
-            //                       a1 = [{"name": "Brand-A", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
-            //                             {"name": "Brand-B", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
-            //                             {"name": "Brand-C", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
-            //                       return select name, keys from a1 where u.echo("one", 2, 1.2345, false, true, {"name":"value"})';
-            //         engine.execute(script, function (emitter) {
-            //             emitter.on('end', function (err, results) {
-            //                 if(err) {
-            //                     console.log(err.stack || err);
-            //                     test.ok(false);
-            //                     test.done();
-            //                 }
-            //                 else {
-            //                     for(var i = 0; i < 3; i++) {
-            //                         test.equals(results.body[i][0], 'one');
-            //                         test.equals(results.body[i][1], 2);
-            //                         test.equals(results.body[i][2], 1.2345);
-            //                         test.equals(results.body[i][3], false);
-            //                         test.equals(results.body[i][4], true);
-            //                         test.equals(results.body[i][5].name, "value");
-            //                     }
-            //                     test.done();
-            //                 }
-            //             })
-            //         });
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+            engine.execute(script, function (emitter) {
+                emitter.on('end', function (err, results) {
+                    if(err) {
+                        console.log(err.stack || err);
+                        reject(new Error('UDF execution failed: ' + (err.stack || err)));
                     }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
+                    else {
+                        try {
+                            expect(results.body).toBeDefined();
+                            for(let i = 0; i < 3; i++) {
+                                expect(results.body[i][0]).toBe('one');
+                                expect(results.body[i][1]).toBe(2);
+                                expect(results.body[i][2]).toBe(1.2345);
+                                expect(results.body[i][3]).toBe(false);
+                                expect(results.body[i][4]).toBe(true);
+                                expect(results.body[i][5]).toBeDefined();
+                                expect(results.body[i][5].name).toBe("value");
+                            }
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
                     }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
     }, 15000);
     test('col-args', async () => {
+        const script = 'u = require("./test/udfs/args.js");\
+                               a1 = [{"name": "Brand-A", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
+                                     {"name": "Brand-B", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
+                                     {"name": "Brand-C", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
+                               return select name, keys from a1 where u.echo(name, keys)';
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var script = 'u = require("./test/udfs/args.js");\
-            //                               a1 = [{"name": "Brand-A", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
-            //                                     {"name": "Brand-B", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
-            //                                     {"name": "Brand-C", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
-            //                               return select name, keys from a1 where u.echo(name, keys)';
-            //         engine.execute(script, function (emitter) {
-            //             emitter.on('end', function (err, results) {
-            //                 if(err) {
-            //                     console.log(err.stack || err);
-            //                     test.ok(false);
-            //                     test.done();
-            //                 }
-            //                 else {
-            //                     test.equal(results.body[0][0], 'Brand-A');
-            //                     test.deepEqual(results.body[0][1], [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]);
-            //                     test.equal(results.body[1][0], 'Brand-B');
-            //                     test.deepEqual(results.body[1][1], [{ "name": "G1"},{"name": "G2"}]);
-            //                     test.equal(results.body[2][0], 'Brand-C');
-            //                     test.deepEqual(results.body[2][1], [{ "name": "G4"},{"name": "G2"}]);
-            //                     test.done();
-            //                 }
-            //             })
-            //         });
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+            engine.execute(script, function (emitter) {
+                emitter.on('end', function (err, results) {
+                    if(err) {
+                        console.log(err.stack || err);
+                        reject(new Error('UDF execution failed: ' + (err.stack || err)));
                     }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
+                    else {
+                        try {
+                            expect(results.body).toBeDefined();
+                            expect(results.body[0][0]).toBe('Brand-A');
+                            expect(results.body[0][1]).toEqual([{ "name": "G1"},{"name": "G2"},{"name": "G3"}]);
+                            expect(results.body[1][0]).toBe('Brand-B');
+                            expect(results.body[1][1]).toEqual([{ "name": "G1"},{"name": "G2"}]);
+                            expect(results.body[2][0]).toBe('Brand-C');
+                            expect(results.body[2][1]).toEqual([{ "name": "G4"},{"name": "G2"}]);
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
                     }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
     }, 15000);
     test('col-args-extra-echo', async () => {
+        const script = 'u = require("./test/udfs/args.js");\
+                       a1 = [{"name": "Brand-A", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
+                             {"name": "Brand-B", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
+                             {"name": "Brand-C", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
+                       return select name from a1 where u.echo(name, keys)';
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var script = 'u = require("./test/udfs/args.js");\
-            //                                   a1 = [{"name": "Brand-A", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
-            //                                         {"name": "Brand-B", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
-            //                                         {"name": "Brand-C", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
-            //                                   return select name from a1 where u.echo(name, keys)';
-            //         engine.execute(script, function (emitter) {
-            //             emitter.on('end', function (err, results) {
-            //                 if(err) {
-            //                     console.log(err.stack || err);
-            //                     test.ok(false);
-            //                     test.done();
-            //                 }
-            //                 else {
-            //                     test.equal(results.body[0][0], 'Brand-A');
-            //                     test.deepEqual(results.body[0][1], [
-            //                         { "name": "G1"},
-            //                         {"name": "G2"},
-            //                         {"name": "G3"}
-            //                     ]);
-            //                     test.equal(results.body[1][0], 'Brand-B');
-            //                     test.deepEqual(results.body[1][1], [
-            //                         { "name": "G1"},
-            //                         {"name": "G2"}
-            //                     ]);
-            //                     test.equal(results.body[2][0], 'Brand-C');
-            //                     test.deepEqual(results.body[2][1], [
-            //                         { "name": "G4"},
-            //                         {"name": "G2"}
-            //                     ]);
-            //                     for(var i = 0; i < 3; i++) {
-            //                         test.equal(results.body[i].length, 2, 'Expected two fields, but found ' + results.body[i].length);
-            //                     }
-            //                     test.done();
-            //                 }
-            //             })
-            //         });
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+            engine.execute(script, function (emitter) {
+                emitter.on('end', function (err, results) {
+                    if(err) {
+                        console.log(err.stack || err);
+                        reject(new Error('UDF execution failed: ' + (err.stack || err)));
                     }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
+                    else {
+                        try {
+                            expect(results.body).toBeDefined();
+                            expect(results.body[0][0]).toBe('Brand-A');
+                            expect(results.body[0][1]).toEqual([
+                                { "name": "G1"},
+                                {"name": "G2"},
+                                {"name": "G3"}
+                            ]);
+                            expect(results.body[1][0]).toBe('Brand-B');
+                            expect(results.body[1][1]).toEqual([
+                                { "name": "G1"},
+                                {"name": "G2"}
+                            ]);
+                            expect(results.body[2][0]).toBe('Brand-C');
+                            expect(results.body[2][1]).toEqual([
+                                { "name": "G4"},
+                                {"name": "G2"}
+                            ]);
+                            for(let i = 0; i < 3; i++) {
+                                expect(results.body[i].length).toBe(2);
+                            }
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
                     }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
     }, 15000);
     test('col-args-alias-extra-echo', async () => {
+        const script = 'u = require("./test/udfs/args.js");\
+                       a1 = [{"name": "Brand-A", "color": "red", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
+                             {"name": "Brand-B", "color": "green", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
+                             {"name": "Brand-C", "color": "blue", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
+                       return select name as n, keys as k from a1 where u.echo(name, color, keys)';
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var script = 'u = require("./test/udfs/args.js");\
-            //                                       a1 = [{"name": "Brand-A", "color": "red", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
-            //                                             {"name": "Brand-B", "color": "green", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
-            //                                             {"name": "Brand-C", "color": "blue", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
-            //                                       return select name as n, keys as k from a1 where u.echo(name, color, keys)';
-            //         engine.execute(script, function (emitter) {
-            //             emitter.on('end', function (err, results) {
-            //                 if(err) {
-            //                     console.log(err.stack || err);
-            //                     test.ok(false);
-            //                     test.done();
-            //                 }
-            //                 else {
-            //                     // Though we selected fields by alias the UDF converted into an array,
-            //                     test.equal(results.body[0][0], 'Brand-A');
-            //                     test.equal(results.body[0][1], 'red');
-            //                     test.deepEqual(results.body[0][2], [
-            //                         { "name": "G1"},
-            //                         {"name": "G2"},
-            //                         {"name": "G3"}
-            //                     ]);
-            //                     test.equal(results.body[1][0], 'Brand-B');
-            //                     test.equal(results.body[1][1], 'green');
-            //                     test.deepEqual(results.body[1][2], [
-            //                         { "name": "G1"},
-            //                         {"name": "G2"}
-            //                     ]);
-            //                     test.equal(results.body[2][0], 'Brand-C');
-            //                     test.equal(results.body[2][1], 'blue');
-            //                     test.deepEqual(results.body[2][2], [
-            //                         { "name": "G4"},
-            //                         {"name": "G2"}
-            //                     ]);
-            //                     for(var i = 0; i < 3; i++) {
-            //                         test.equal(results.body[i].length, 3, 'Expected three fields, but found ' + results.body[i].length);
-            //                     }
-            //                     test.done();
-            //                 }
-            //             })
-            //         });
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+            engine.execute(script, function (emitter) {
+                emitter.on('end', function (err, results) {
+                    if(err) {
+                        console.log(err.stack || err);
+                        reject(new Error('UDF execution failed: ' + (err.stack || err)));
                     }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
+                    else {
+                        try {
+                            expect(results.body).toBeDefined();
+                            // Though we selected fields by alias the UDF converted into an array
+                            expect(results.body[0][0]).toBe('Brand-A');
+                            expect(results.body[0][1]).toBe('red');
+                            expect(results.body[0][2]).toEqual([
+                                { "name": "G1"},
+                                {"name": "G2"},
+                                {"name": "G3"}
+                            ]);
+                            expect(results.body[1][0]).toBe('Brand-B');
+                            expect(results.body[1][1]).toBe('green');
+                            expect(results.body[1][2]).toEqual([
+                                { "name": "G1"},
+                                {"name": "G2"}
+                            ]);
+                            expect(results.body[2][0]).toBe('Brand-C');
+                            expect(results.body[2][1]).toBe('blue');
+                            expect(results.body[2][2]).toEqual([
+                                { "name": "G4"},
+                                {"name": "G2"}
+                            ]);
+                            for(let i = 0; i < 3; i++) {
+                                expect(results.body[i].length).toBe(3);
+                            }
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
                     }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
     }, 15000);
     test('col-args-extra-thru', async () => {
+        // Selected rows should not have keys
+        const script = 'u = require("./test/udfs/args.js");\
+                       a1 = [{"name": "Brand-A", "color": "red", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
+                             {"name": "Brand-B", "color": "green", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
+                             {"name": "Brand-C", "color": "blue", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
+                       return select name from a1 where u.thru(name, keys, color)';
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // // Selected rows should not have keys
-            //         var script = 'u = require("./test/udfs/args.js");\
-            //                                       a1 = [{"name": "Brand-A", "color": "red", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
-            //                                             {"name": "Brand-B", "color": "green", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
-            //                                             {"name": "Brand-C", "color": "blue", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
-            //                                       return select name from a1 where u.thru(name, keys, color)';
-            //         engine.execute(script, function (emitter) {
-            //             emitter.on('end', function (err, results) {
-            //                 if(err) {
-            //                     console.log(err.stack || err);
-            //                     test.ok(false);
-            //                     test.done();
-            //                 }
-            //                 else {
-            //                     test.equal(results.body[0][0], 'Brand-A');
-            //                     test.equal(results.body[1][0], 'Brand-B');
-            //                     test.equal(results.body[2][0], 'Brand-C');
-            //                     for(var i = 0; i < 3; i++) {
-            //                         test.equal(results.body[i].length, 1, 'Expected one field, but found ' + results.body[i].length);
-            //                     }
-            //                     test.done();
-            //                 }
-            //             })
-            //         });
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+            engine.execute(script, function (emitter) {
+                emitter.on('end', function (err, results) {
+                    if(err) {
+                        console.log(err.stack || err);
+                        reject(new Error('UDF execution failed: ' + (err.stack || err)));
                     }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
+                    else {
+                        try {
+                            expect(results.body).toBeDefined();
+                            expect(results.body[0][0]).toBe('Brand-A');
+                            expect(results.body[1][0]).toBe('Brand-B');
+                            expect(results.body[2][0]).toBe('Brand-C');
+                            for(let i = 0; i < 3; i++) {
+                                expect(results.body[i].length).toBe(1);
+                            }
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
                     }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
     }, 15000);
     test('col-args-alias-extra-thru', async () => {
+        const script = 'u = require("./test/udfs/args.js");\
+                       a1 = [{"name": "Brand-A", "color": "red", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
+                             {"name": "Brand-B", "color": "green", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
+                             {"name": "Brand-C", "color": "blue", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
+                       return select name as n, keys as k from a1 where u.thru(name, color, keys)';
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var script = 'u = require("./test/udfs/args.js");\
-            //                                       a1 = [{"name": "Brand-A", "color": "red", "keys" : [{ "name": "G1"},{"name": "G2"},{"name": "G3"}]},\
-            //                                             {"name": "Brand-B", "color": "green", "keys" : [{ "name": "G1"},{"name": "G2"}]},\
-            //                                             {"name": "Brand-C", "color": "blue", "keys" : [{ "name": "G4"},{"name": "G2"}]}];\
-            //                                       return select name as n, keys as k from a1 where u.thru(name, color,  keys)';
-            //         engine.execute(script, function (emitter) {
-            //             emitter.on('end', function (err, results) {
-            //                 if(err) {
-            //                     console.log(err.stack || err);
-            //                     test.ok(false);
-            //                     test.done();
-            //                 }
-            //                 else {
-            //                     // Though we selected fields by alias the UDF converted into an array,
-            //                     test.equal(results.body[0].n, 'Brand-A');
-            //                     test.deepEqual(results.body[0].k, [
-            //                         { "name": "G1"},
-            //                         {"name": "G2"},
-            //                         {"name": "G3"}
-            //                     ]);
-            //                     test.equal(results.body[1].n, 'Brand-B');
-            //                     test.deepEqual(results.body[1].k, [
-            //                         { "name": "G1"},
-            //                         {"name": "G2"}
-            //                     ]);
-            //                     test.equal(results.body[2].n, 'Brand-C');
-            //                     test.deepEqual(results.body[2].k, [
-            //                         { "name": "G4"},
-            //                         {"name": "G2"}
-            //                     ]);
-            //                     test.done();
-            //                 }
-            //             })
-            //         });
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+            engine.execute(script, function (emitter) {
+                emitter.on('end', function (err, results) {
+                    if(err) {
+                        console.log(err.stack || err);
+                        reject(new Error('UDF execution failed: ' + (err.stack || err)));
                     }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
+                    else {
+                        try {
+                            expect(results.body).toBeDefined();
+                            // Though we selected fields by alias the UDF converted into an array
+                            expect(results.body[0].n).toBe('Brand-A');
+                            expect(results.body[0].k).toEqual([
+                                { "name": "G1"},
+                                {"name": "G2"},
+                                {"name": "G3"}
+                            ]);
+                            expect(results.body[1].n).toBe('Brand-B');
+                            expect(results.body[1].k).toEqual([
+                                { "name": "G1"},
+                                {"name": "G2"}
+                            ]);
+                            expect(results.body[2].n).toBe('Brand-C');
+                            expect(results.body[2].k).toEqual([
+                                { "name": "G4"},
+                                {"name": "G2"}
+                            ]);
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
                     }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
     }, 15000);
     test('filter-row', async () => {
+        const script = 'u = require("./test/udfs/filter.js");\n\
+                       a = [1, 1, 2, 2, 3, 3, 4];\n\
+                       b = select * from a where u.filter();\n\
+                       return b';
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var script = 'u = require("./test/udfs/filter.js");\n\
-            //                       a = [1, 1, 2, 2, 3, 3, 4];\n\
-            //                       b = select * from a where u.filter();\n\
-            //                       return b';
-            //         engine.execute(script, function(emitter) {
-            //             emitter.on('end', function(err, results) {
-            //                 test.deepEqual(results.body, [1,2,3,4]);
-            //                 test.done();
-            //             });
-            //         })
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+            engine.execute(script, function(emitter) {
+                emitter.on('end', function(err, results) {
+                    if(err) {
+                        reject(new Error('Filter UDF execution failed: ' + (err.stack || err)));
                     }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
+                    else {
+                        try {
+                            expect(results.body).toBeDefined();
+                            expect(results.body).toEqual([1,2,3,4]);
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
                     }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
     }, 15000);
     test('select-*', async () => {
+        const script = 'u = require("./test/udfs/args.js");\n\
+                       a = {"arr": [1, 1, 2, 2, 3, 3, 4]};\n\
+                       b = select * from a where u.stringify();\n\
+                       return b';
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var script = 'u = require("./test/udfs/args.js");\n\
-            //                       a = {"arr": [1, 1, 2, 2, 3, 3, 4]};\n\
-            //                       b = select * from a where u.stringify();\n\
-            //                       return b';
-            //         engine.execute(script, function (emitter) {
-            //             emitter.on('end', function (err, results) {
-            //                 if(err) {
-            //                     console.log(err.stack || err);
-            //                     test.ok(false);
-            //                     test.done();
-            //                 }
-            //                 else {
-            //                     test.equal(results.body, '{"arr":[1,1,2,2,3,3,4]}');
-            //                     test.done();
-            //                 }
-            //             })
-            //         });
-            // 
-            //     }
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+            engine.execute(script, function (emitter) {
+                emitter.on('end', function (err, results) {
+                    if(err) {
+                        console.log(err.stack || err);
+                        reject(new Error('UDF execution failed: ' + (err.stack || err)));
                     }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
+                    else {
+                        try {
+                            expect(results.body).toBeDefined();
+                            expect(results.body).toBe('{"arr":[1,1,2,2,3,3,4]}');
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
                     }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
     }, 15000);
 });

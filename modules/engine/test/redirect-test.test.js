@@ -1,7 +1,10 @@
 const Engine = require('../lib/engine');
+const fs = require('fs');
+const http = require('http');
+
 describe('redirect test Tests', () => {
     let engine;
-    let server;
+    let servers = [];
 
     beforeEach(() => {
         engine = new Engine({
@@ -10,442 +13,384 @@ describe('redirect test Tests', () => {
     });
 
     afterEach(async () => {
-        if (server && server.listening) {
-            await new Promise((resolve) => {
-                server.close(() => {
-                    server = null;
-                    setTimeout(resolve, 100);
+        // Close all servers
+        for (const server of servers) {
+            if (server && server.listening) {
+                await new Promise((resolve) => {
+                    server.close(() => {
+                        setTimeout(resolve, 100);
+                    });
                 });
-            });
+            }
         }
+        servers = [];
     });
 
-    test('positive', async () => {
+    test('should follow redirects successfully', async () => {
+        // Create redirect server that redirects to final server
+        const redirectServer = http.createServer(function(req, res) {
+            res.writeHead(302, {
+                'Location': 'http://127.0.0.1:8301/redirect-response.json'
+            });
+            res.end();
+        });
+        
+        // Create final server that serves the actual response
+        const finalServer = http.createServer(function(req, res) {
+            const file = __dirname + '/mock' + req.url;
+            try {
+                const data = fs.readFileSync(file, 'UTF-8');
+                res.writeHead(200, {
+                    'Content-Type': 'application/json'
+                });
+                res.end(data);
+            } catch (e) {
+                res.writeHead(404);
+                res.end('Not found');
+            }
+        });
+        
+        // Start servers
+        await new Promise((resolve) => {
+            redirectServer.listen(8300, resolve);
+        });
+        servers.push(redirectServer);
+        
+        await new Promise((resolve) => {
+            finalServer.listen(8301, resolve);
+        });
+        servers.push(finalServer);
+        
+        const testEngine = new Engine({
+            tables: __dirname + '/tables'
+        });
+        
+        const script = fs.readFileSync(__dirname + '/mock/redirect.ql', 'UTF-8');
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var servers = servers_positive;
-            // 
-            //         setupServers(servers);
-            // 
-            //         var engine = new Engine({
-            //             config:__dirname + '/config/dev.json'
-            //         });
-            // 
-            //         var script = fs.readFileSync(__dirname + '/mock/redirect.ql', 'UTF-8');
-            // 
-            //         var listener = new Listener(engine);
-            //         engine.exec({
-            //             script:script,
-            //             cb:function (err, result) {
-            //                 listener.assert(test);
-            //                 try {
-            //                     if (err) {
-            //                         console.log(err.stack || err);
-            //                         test.ok(false);
-            //                     } else {
-            //                         test.ok(result && result.body.id === "42");
-            //                     }
-            //                     test.done();
-            //                 }
-            //                 finally {
-            //                     for (var i = 0; i < servers.length; i++) {
-            //                         servers[i].instance.close();
-            //                     }
-            //                 }
-            //             }
-            //         });
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        if (err) {
+                            reject(new Error('Redirect test failed: ' + err.message));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        expect(result.body.id).toBe("42");
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                    reject(new Error('Redirect error: ' + err.message));
+                });
+            });
         });
-    }, 15000);
-    test('negative', async () => {
+    });
+    test('should fail when exceeding max redirects', async () => {
+        // Create servers that redirect in a loop to exceed max redirects
+        const server1 = http.createServer(function(req, res) {
+            res.writeHead(302, {
+                'Location': 'http://127.0.0.1:8301/redirect-response.json'
+            });
+            res.end();
+        });
+        
+        const server2 = http.createServer(function(req, res) {
+            res.writeHead(302, {
+                'Location': 'http://127.0.0.1:8300/redirect-response.json'
+            });
+            res.end();
+        });
+        
+        // Start servers
+        await new Promise((resolve) => {
+            server1.listen(8300, resolve);
+        });
+        servers.push(server1);
+        
+        await new Promise((resolve) => {
+            server2.listen(8301, resolve);
+        });
+        servers.push(server2);
+        
+        const testEngine = new Engine({
+            tables: __dirname + '/tables'
+        });
+        
+        const script = fs.readFileSync(__dirname + '/mock/redirect.ql', 'UTF-8');
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var servers = servers_negative;
-            // 
-            //         setupServers(servers);
-            // 
-            //         var engine = new Engine({
-            //             config:__dirname + '/config/dev.json'
-            //         });
-            // 
-            //         var script = fs.readFileSync(__dirname + '/mock/redirect.ql', 'UTF-8');
-            //         var listener = new Listener(engine);
-            //         engine.exec({
-            //             script:script,
-            //             cb:function (err, result) {
-            //                 listener.assert(test);
-            //                 try {
-            //                     if (!err) {
-            //                         test.ok(false, "Error expected.");
-            //                     } else {
-            //                         test.ok(err.message === "Exceeded max redirects");
-            //                     }
-            //                     test.done();
-            //                 }
-            //                 finally {
-            //                     for (var i = 0; i < servers.length; i++) {
-            //                         servers[i].instance.close();
-            //                     }
-            //                 }
-            //             }
-            //         });
-            // 
-            //     },
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        // Should get an error about exceeding max redirects
+                        expect(err).toBeDefined();
+                        expect(err.message).toContain('redirect');
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
+                    // Error is expected for too many redirects
+                    expect(err).toBeDefined();
+                    expect(err.message).toContain('redirect');
                     resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
-    }, 15000);
-    test('rel-location-header', async () => {
+    });
+    test('should handle relative location headers', async () => {
+        // Create server that redirects with relative location header
+        const server = http.createServer(function(req, res) {
+            if (req.url.indexOf('/rel') === 0) {
+                // Redirect with relative location
+                res.writeHead(302, {
+                    'Location': '/redirect-response.json'
+                });
+                res.end();
+            } else {
+                // Serve the actual response
+                const file = __dirname + '/mock' + req.url;
+                try {
+                    const data = fs.readFileSync(file, 'UTF-8');
+                    res.writeHead(200, {
+                        'Content-Type': 'application/json'
+                    });
+                    res.end(data);
+                } catch (e) {
+                    res.writeHead(404);
+                    res.end('Not found');
+                }
+            }
+        });
+        
+        // Start server
+        await new Promise((resolve) => {
+            server.listen(8300, resolve);
+        });
+        servers.push(server);
+        
+        const testEngine = new Engine({
+            tables: __dirname + '/tables'
+        });
+        
+        const script = fs.readFileSync(__dirname + '/mock/redirect-rel.ql', 'UTF-8');
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var servers = servers_rel_location;
-            // 
-            //         // Special case: need to create custom server that will redirect if given prefix '/rel' in the path, but return data otherwise
-            //         servers[0].instance = http.createServer(function (req, res) {
-            //             if (req.url.indexOf('/rel') === 0) {
-            //                 res.writeHead(servers[0].status, {
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        if (err) {
+                            reject(new Error('Relative redirect test failed: ' + err.message));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        expect(result.body.id).toBe("42");
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                    reject(new Error('Relative redirect error: ' + err.message));
+                });
+            });
         });
-    }, 15000);
-    test('bad-location-header', async () => {
+    });
+    test('should handle bad location header gracefully', async () => {
+        // Create server that sends redirect with malformed location header
+        const server = http.createServer(function(req, res) {
+            res.writeHead(302, {
+                'Location': 'not-a-valid-url'
+            });
+            res.end();
+        });
+        
+        // Start server
+        await new Promise((resolve) => {
+            server.listen(8300, resolve);
+        });
+        servers.push(server);
+        
+        const testEngine = new Engine({
+            tables: __dirname + '/tables'
+        });
+        
+        const script = fs.readFileSync(__dirname + '/mock/redirect.ql', 'UTF-8');
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var servers = servers_no_location;
-            // 
-            //         // Special case: need to create bad server
-            //         servers[0].instance = http.createServer(function (req, res) {
-            //             res.writeHead(servers[0].status, {
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        // Should get an error for bad location header
+                        expect(err).toBeDefined();
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
+                    // Error is expected for bad location header
+                    expect(err).toBeDefined();
                     resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
-    }, 15000);
-    test('no-location-header', async () => {
+    });
+    test('should handle missing location header', async () => {
+        // Create server that sends redirect without location header
+        const server = http.createServer(function(req, res) {
+            res.writeHead(302, {
+                'Content-Type': 'text/plain'
+                // No Location header
+            });
+            res.end('Redirect without location');
+        });
+        
+        // Start server
+        await new Promise((resolve) => {
+            server.listen(8300, resolve);
+        });
+        servers.push(server);
+        
+        const testEngine = new Engine({
+            tables: __dirname + '/tables'
+        });
+        
+        const script = fs.readFileSync(__dirname + '/mock/redirect.ql', 'UTF-8');
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var servers = servers_no_location;
-            // 
-            //         // Special case: need to create bad server
-            //         servers[0].instance = http.createServer(function (req, res) {
-            //             var location = protocol + '://
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        // Should get an error for missing location header
+                        expect(err).toBeDefined();
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
+                    // Error is expected for missing location header
+                    expect(err).toBeDefined();
                     resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
-    }, 15000);
-    test('status-305', async () => {
+    });
+    test('should handle status 305 (Use Proxy) error', async () => {
+        // Create server that returns status 305
+        const server = http.createServer(function(req, res) {
+            res.writeHead(305, {
+                'Location': 'http://proxy.example.com:8080'
+            });
+            res.end('Use Proxy');
+        });
+        
+        // Start server
+        await new Promise((resolve) => {
+            server.listen(8300, resolve);
+        });
+        servers.push(server);
+        
+        const testEngine = new Engine({
+            tables: __dirname + '/tables'
+        });
+        
+        const script = fs.readFileSync(__dirname + '/mock/redirect.ql', 'UTF-8');
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var servers = servers_305;
-            // 
-            //         setupServers(servers);
-            // 
-            //         var engine = new Engine({
-            //             config:__dirname + '/config/dev.json'
-            //         });
-            // 
-            //         var script = fs.readFileSync(__dirname + '/mock/redirect.ql', 'UTF-8');
-            // 
-            //         var listener = new Listener(engine);
-            //         engine.exec({
-            //             script:script,
-            //             cb:function (err, result) {
-            //                 listener.assert(test);
-            //                 try {
-            //                     if (!err) {
-            //                         test.ok(false, "Error expected.");
-            //                     } else {
-            //                         test.ok(err.message === "Received status code 305 from downstream server");
-            //                     }
-            //                     test.done();
-            //                 }
-            //                 finally {
-            //                     for (var i = 0; i < servers.length; i++) {
-            //                         servers[i].instance.close();
-            //                     }
-            //                 }
-            //             }
-            //         });
-            //     }
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        // Should get an error for status 305
+                        expect(err).toBeDefined();
+                        expect(err.message).toContain('305');
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
+                    // Error is expected for status 305
+                    expect(err).toBeDefined();
+                    expect(err.message).toContain('305');
                     resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
-    }, 15000);
+    });
 });

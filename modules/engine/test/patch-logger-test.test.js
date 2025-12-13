@@ -1,4 +1,6 @@
 const Engine = require('../lib/engine');
+const http = require('http');
+
 describe('patch logger test Tests', () => {
     let engine;
     let server;
@@ -20,59 +22,75 @@ describe('patch logger test Tests', () => {
         }
     });
 
-    test('patch body', async () => {
+    test('should patch logger functionality', async () => {
+        // Create mock server that logs request details
+        server = http.createServer(function(req, res) {
+            let body = '';
+            req.on('data', function(chunk) {
+                body += chunk.toString();
+            });
+            req.on('end', function() {
+                res.writeHead(200, {
+                    'Content-Type': 'application/json'
+                });
+                res.end(JSON.stringify({
+                    method: req.method,
+                    url: req.url,
+                    headers: req.headers,
+                    body: body,
+                    logged: true
+                }));
+            });
+        });
+        
+        await new Promise((resolve) => {
+            server.listen(3000, resolve);
+        });
+        
+        const testEngine = new Engine({
+            tables: __dirname + '/tables'
+        });
+        
+        const script = `
+            create table logtest 
+                on select get from 'http://localhost:3000/test-endpoint'
+            
+            select * from logtest
+        `;
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var server = http.createServer(function (req, res) {
-            //             res.writeHead(200, {
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        if (err) {
+                            reject(new Error('Logger patch test failed: ' + err.message));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        expect(result.body.logged).toBe(true);
+                        expect(result.body.method).toBe('GET');
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                    reject(new Error('Logger patch error: ' + err.message));
+                });
+            });
         });
-    }, 15000);
+    });
 });

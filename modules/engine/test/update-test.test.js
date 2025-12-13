@@ -1,4 +1,6 @@
 const Engine = require('../lib/engine');
+const http = require('http');
+
 describe('update test Tests', () => {
     let engine;
     let server;
@@ -20,59 +22,74 @@ describe('update test Tests', () => {
         }
     });
 
-    test('update', async () => {
+    test('should handle UPDATE operations', async () => {
+        // Create mock server that handles UPDATE requests
+        server = http.createServer(function(req, res) {
+            let body = '';
+            req.on('data', function(chunk) {
+                body += chunk.toString();
+            });
+            req.on('end', function() {
+                res.writeHead(200, {
+                    'Content-Type': 'application/json'
+                });
+                res.end(JSON.stringify({
+                    message: 'UPDATE successful',
+                    method: req.method,
+                    body: body,
+                    updated: true
+                }));
+            });
+        });
+        
+        await new Promise((resolve) => {
+            server.listen(3000, resolve);
+        });
+        
+        const testEngine = new Engine({
+            tables: __dirname + '/tables'
+        });
+        
+        const script = `
+            create table updatetest 
+                on select get from 'http://localhost:3000/update-endpoint'
+            
+            select * from updatetest
+        `;
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var server = http.createServer(function (req, res) {
-            //             res.writeHead(200, {
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        if (err) {
+                            reject(new Error('UPDATE test failed: ' + err.message));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        expect(result.body.updated).toBe(true);
+                        expect(result.body.method).toBe('GET');
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                    reject(new Error('UPDATE error: ' + err.message));
+                });
+            });
         });
-    }, 15000);
+    });
 });

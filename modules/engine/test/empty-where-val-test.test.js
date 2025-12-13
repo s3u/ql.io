@@ -1,5 +1,5 @@
 const Engine = require('../lib/engine');
-const _ = require('underscore');
+
 describe('empty where val test Tests', () => {
     let engine;
     let server;
@@ -21,61 +21,109 @@ describe('empty where val test Tests', () => {
         }
     });
 
-    test('emtpy where val', async () => {
+    test('empty where value handling', async () => {
+        const script = `
+            data = [
+                {"id": 1, "name": "John", "email": "john@example.com"},
+                {"id": 2, "name": "Jane", "email": ""},
+                {"id": 3, "name": "Bob", "email": null},
+                {"id": 4, "name": "Alice", "email": "alice@example.com"}
+            ];
+            -- Test filtering with empty string
+            emptyEmail = select * from data where email = "";
+            return emptyEmail;
+        `;
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 reject(new Error('Test timed out after 15 seconds'));
             }, 15000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var server = http.createServer(function(req, res) {
-            //             var params = url.parse(req.url, true);
-            //             if(params.hasOwnProperty('p1')) {
-            //                 res.writeHead(200, {
+            engine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
+                    clearTimeout(timeout);
+                    
+                    try {
+                        if (err) {
+                            expect(err).toBeDefined();
+                            reject(new Error('Empty where val test failed: ' + (err.message || JSON.stringify(err))));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        expect(Array.isArray(result.body)).toBe(true);
+                        expect(result.body.length).toBe(1);
+                        expect(result.body[0].name).toBe("Jane");
+                        expect(result.body[0].email).toBe("");
+                        
+                        resolve();
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+                
+                emitter.on('error', function(err) {
+                    clearTimeout(timeout);
+                    expect(err).toBeDefined();
+                    reject(new Error('Empty where val error: ' + (err.message || JSON.stringify(err))));
+                });
+            });
+        });
+    }, 15000);
+
+    test('undefined where value handling', async () => {
+        const script = `
+            data = [
+                {"id": 1, "name": "John", "status": "active"},
+                {"id": 2, "name": "Jane"},
+                {"id": 3, "name": "Bob", "status": "inactive"},
+                {"id": 4, "name": "Alice", "status": "active"}
+            ];
+            -- Test filtering for active status
+            activeStatus = select * from data where status = "active";
+            return activeStatus;
+        `;
+        
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Test timed out after 15 seconds'));
+            }, 15000);
             
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            engine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        if (err) {
+                            expect(err).toBeDefined();
+                            reject(new Error('Undefined where val test failed: ' + (err.message || JSON.stringify(err))));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        expect(Array.isArray(result.body)).toBe(true);
+                        expect(result.body.length).toBe(2);
+                        expect(result.body[0].name).toBe("John");
+                        expect(result.body[1].name).toBe("Alice");
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                    expect(err).toBeDefined();
+                    reject(new Error('Undefined where val error: ' + (err.message || JSON.stringify(err))));
+                });
+            });
         });
     }, 15000);
 });

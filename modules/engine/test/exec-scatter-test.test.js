@@ -1,5 +1,4 @@
 const Engine = require('../lib/engine');
-const _ = require('underscore');
 describe('exec scatter test Tests', () => {
     let engine;
     let server;
@@ -22,117 +21,114 @@ describe('exec scatter test Tests', () => {
     });
 
     test('select-times', async () => {
+        // Start a mock server to serve the JSON file
+        const http = require('http');
+        const fs = require('fs');
+        server = http.createServer(function(req, res) {
+            const file = __dirname + '/mock' + req.url;
+            try {
+                const stat = fs.statSync(file);
+                res.writeHead(200, {
+                    'Content-Type': 'application/json',
+                    'Content-Length': stat.size
+                });
+                fs.createReadStream(file).pipe(res);
+            } catch (e) {
+                res.writeHead(404);
+                res.end('Not found');
+            }
+        });
+        
+        await new Promise((resolve) => {
+            server.listen(3000, resolve);
+        });
+        
+        const script = fs.readFileSync(__dirname + '/mock/scatter.ql', 'UTF-8');
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var server = http.createServer(function(req, res) {
-            //             var file = __dirname + '/mock/' + req.url;
-            //             var stat = fs.statSync(file);
-            //             res.writeHead(200, {
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
-                    }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
+            const context = {
+                times: 2
             };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+            engine.execute(script, {
+                context: context,
+                request: {
+                    params: {
+                        times: 2
+                    }
+                }
+            }, function(emitter) {
+                emitter.on('end', function(err, result) {
+                    if(err) {
+                        reject(new Error('Scatter select-times test failed: ' + (err.stack || err)));
+                    }
+                    else {
+                        try {
+                            expect(result).toBeDefined();
+                            expect(result.body).toBeDefined();
+                            // Should have made 2 requests due to scatter
+                            expect(Array.isArray(result.body)).toBe(true);
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
+                    }
+                });
+            });
         });
     }, 15000);
     test('select-context-lookup', async () => {
+        // Start a mock server to serve the JSON file
+        const http = require('http');
+        const fs = require('fs');
+        server = http.createServer(function(req, res) {
+            const file = __dirname + '/mock' + req.url;
+            try {
+                const stat = fs.statSync(file);
+                res.writeHead(200, {
+                    'Content-Type': 'application/json',
+                    'Content-Length': stat.size
+                });
+                fs.createReadStream(file).pipe(res);
+            } catch (e) {
+                res.writeHead(404);
+                res.end('Not found');
+            }
+        });
+        
+        await new Promise((resolve) => {
+            server.listen(3000, resolve);
+        });
+        
+        const script = 'create table items.rp\
+                         on select get from "http://localhost:3000/FindItemsResponsePatch.json"\
+                         using patch "test/mock/scatter.js"\
+                         resultset "findItemsByKeywordsResponse";\
+                       FindItemsByKeywordsResponse = select * from items.rp where times = "{contextTimes}";\
+                       return FindItemsByKeywordsResponse;';
+        
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
-            
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var server = http.createServer(function(req, res) {
-            //             var file = __dirname + '/mock/' + req.url;
-            //             var stat = fs.statSync(file);
-            //             res.writeHead(200, {
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(condition).toBe(true);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
-                    }
-                },
-                equals: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
+            const context = {
+                contextTimes: 3
             };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+            engine.execute(script, {
+                context: context
+            }, function(emitter) {
+                emitter.on('end', function(err, result) {
+                    if(err) {
+                        reject(new Error('Scatter context lookup test failed: ' + (err.stack || err)));
+                    }
+                    else {
+                        try {
+                            expect(result).toBeDefined();
+                            expect(result.body).toBeDefined();
+                            // Should have made requests based on context variable
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
+                    }
+                });
+            });
         });
     }, 15000);
 });
