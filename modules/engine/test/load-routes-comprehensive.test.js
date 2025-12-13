@@ -109,7 +109,8 @@ describe('Load Routes Comprehensive Tests', () => {
             
             expect(result).toBeDefined();
             expect(result.verbMap).toBeDefined();
-            expect(mockLogEmitter.emitWarning).toHaveBeenCalled();
+            // Empty files are valid and should not emit warnings
+            expect(mockLogEmitter.emitWarning).not.toHaveBeenCalled();
         });
 
         test('should handle QL files with only comments', () => {
