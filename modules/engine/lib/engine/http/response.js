@@ -14,30 +14,30 @@
  * limitations under the License.
  */
 
-var _ = require('underscore'),
-    project = require('../project.js'),
-    eventTypes = require('../event-types.js'),
-    _headers = require('headers'),
-    http = require('http'),
-    util = require('util');
+const _ = require('underscore');
+const project = require('../project.js');
+const eventTypes = require('../event-types.js');
+const _headers = require('headers');
+const http = require('http');
+const util = require('util');
 
-parseResponse = exports.parseResponse = function(timings, reqStart, args, res, bufs) {
+const parseResponse = exports.parseResponse = (timings, reqStart, args, res, bufs) => {
     timings.receive = Date.now() - reqStart;
 
     // TODO: Handle redirects
     // The default patch decodes the response
-    var result = args.resource.parseResponse(res.headers, bufs, args);
+    const result = args.resource.parseResponse(res.headers, bufs, args);
     return result;
 }
 
 exports.exec = function(timings, reqStart, args, uniqueId, res, start, result, options) {
-    var mediaType, status;
+    let mediaType, status;
 
     res.headers['content-type'] = result.type || res.headers['content-type'];
-    var respData = result.content;
+    const respData = result.content;
 
     if(args.emitter) {
-        var packet = {
+        const packet = {
             line: args.statement.line,
             uuid: uniqueId,
             id: uniqueId,
@@ -49,7 +49,7 @@ exports.exec = function(timings, reqStart, args, uniqueId, res, start, result, o
             type: eventTypes.STATEMENT_RESPONSE,
             timings: timings
         };
-        _.each(res.headers, function (v, n) {
+        _.each(res.headers, (v, n) => {
             packet.headers.push({
                 name: n,
                 value: v
@@ -71,7 +71,7 @@ exports.exec = function(timings, reqStart, args, uniqueId, res, start, result, o
     mediaType = sniffMediaType(res, respData, args);
 
     // Parse
-    jsonify(args.table, respData, mediaType, res.headers, args.xformers, function (respJson) {
+    jsonify(args.table, respData, mediaType, res.headers, args.xformers, (respJson) => {
         status = args.resource.patchStatus(res.statusCode, res.headers, respJson || respData, args)
             || res.statusCode;
 
@@ -79,7 +79,7 @@ exports.exec = function(timings, reqStart, args, uniqueId, res, start, result, o
             if(respJson) {
                 respJson = args.resource.patchResponse(res.statusCode, res.headers, respJson, args);
                 // Projections
-                project.run(args.resource.resultSet, args.statement, respJson, args.context, function (filtered) {
+                project.run(args.resource.resultSet, args.statement, respJson, args.context, (filtered) => {
                     return args.httpReqTx.cb(undefined, {
                         headers: {
                             'content-type': 'application/json'
@@ -106,17 +106,110 @@ exports.exec = function(timings, reqStart, args, uniqueId, res, start, result, o
                 body: respJson || respData
             });
         }
-    }, function (error) {
+    }, (error) => {
         error.body = respData;
         return args.httpReqTx.cb(error);
     });
 }
 
-function jsonify(table, respData, mediaType, headers, xformers, respCb, errorCb) {
+// Async version of exec function
+exports.execAsync = async function(timings, reqStart, args, uniqueId, res, start, result, options) {
+    return new Promise((resolve, reject) => {
+        let mediaType, status;
+
+        res.headers['content-type'] = result.type || res.headers['content-type'];
+        const respData = result.content;
+
+        if(args.emitter) {
+            const packet = {
+                line: args.statement.line,
+                uuid: uniqueId,
+                id: uniqueId,
+                status: res.statusCode,
+                statusText: http.STATUS_CODES[res.statusCode],
+                headers: [],
+                time: new Date() - start,
+                body: respData,
+                type: eventTypes.STATEMENT_RESPONSE,
+                timings: timings
+            };
+            _.each(res.headers, function (v, n) {
+                packet.headers.push({
+                    name: n,
+                    value: v
+                });
+            });
+            args.emitter.emit(eventTypes.STATEMENT_RESPONSE, packet);
+
+            if(res.headers[args.requestId]) {
+                args.emitter.emit(eventTypes.REQUEST_ID_RECEIVED, res.headers[args.requestId]);
+            }
+            else {
+                // Send back the uuid created in ql.io, if the underlying api
+                // doesn't support the request tracing or the table is not configured with
+                // the right name of the header.
+                args.emitter.emit(eventTypes.REQUEST_ID_RECEIVED, args.headers[args.requestId]);
+            }
+        }
+
+        mediaType = sniffMediaType(res, respData, args);
+
+        // Parse with Promise-based approach
+        jsonifyAsync(args.table, respData, mediaType, res.headers, args.xformers)
+            .then(respJson => {
+                status = args.resource.patchStatus(res.statusCode, res.headers, respJson || respData, args)
+                    || res.statusCode;
+
+                if(status >= 200 && status <= 300) {
+                    if(respJson) {
+                        const patchedResponse = args.resource.patchResponse(res.statusCode, res.headers, respJson, args);
+                        // Projections with Promise wrapper
+                        project.run(args.resource.resultSet, args.statement, patchedResponse, args.context, function (filtered) {
+                            const result = {
+                                headers: {
+                                    'content-type': 'application/json'
+                                },
+                                body: filtered
+                            };
+                            args.httpReqTx.cb(undefined, result, JSON.stringify({'status': res.statusCode, 'headers' : res.headers}));
+                            resolve(result);
+                        });
+                    }
+                    else {
+                        const result = {
+                            headers: {
+                                'content-type': mediaType
+                            },
+                            body: respData
+                        };
+                        args.httpReqTx.cb(undefined, result);
+                        resolve(result);
+                    }
+                }
+                else {
+                    const error = {
+                        headers: {
+                            'content-type': respJson ? 'application/json' : mediaType
+                        },
+                        body: respJson || respData
+                    };
+                    args.httpReqTx.cb(error);
+                    reject(error);
+                }
+            })
+            .catch(error => {
+                error.body = respData;
+                args.httpReqTx.cb(error);
+                reject(error);
+            });
+    });
+}
+
+const jsonify = (table, respData, mediaType, headers, xformers, respCb, errorCb) => {
     // Protect against double callback invocation
     let callbackInvoked = false;
     
-    const safeRespCb = function(data) {
+    const safeRespCb = (data) => {
         if (callbackInvoked) {
             return; // Silently ignore subsequent calls
         }
@@ -124,7 +217,7 @@ function jsonify(table, respData, mediaType, headers, xformers, respCb, errorCb)
         return respCb(data);
     };
     
-    const safeErrorCb = function(error) {
+    const safeErrorCb = (error) => {
         if (callbackInvoked) {
             return; // Silently ignore subsequent calls
         }
@@ -150,7 +243,7 @@ function jsonify(table, respData, mediaType, headers, xformers, respCb, errorCb)
     }
     else if(mediaType.type === 'text') {
         // Try JSON first
-        xformers['json'].toJson(respData, safeRespCb, function(jsonError) {
+        xformers['json'].toJson(respData, safeRespCb, (jsonError) => {
             // Only try XML if callback hasn't been invoked yet
             if (!callbackInvoked) {
                 // if JSON parsing fails, try XML
@@ -163,10 +256,42 @@ function jsonify(table, respData, mediaType, headers, xformers, respCb, errorCb)
     }
 }
 
+// Async version of jsonify function
+const jsonifyAsync = async (table, respData, mediaType, headers, xformers) => {
+    return new Promise((resolve, reject) => {
+        if (!respData || /^\s*$/.test(respData)) {
+            resolve({});
+        }
+        else if(xformers[table]) {
+            xformers[table].toJson(respData, resolve, reject, headers);
+        }
+        else if(mediaType.subtype === 'xml' || /\+xml$/.test(mediaType.subtype)) {
+            xformers['xml'].toJson(respData, resolve, reject, headers);
+        }
+        else if(mediaType.subtype === 'json') {
+            xformers['json'].toJson(respData, resolve, reject, headers);
+        }
+        else if(mediaType.subtype === 'csv') {
+            xformers['csv'].toJson(respData, resolve, reject,
+                (mediaType.params && mediaType.params.header != undefined));
+        }
+        else if(mediaType.type === 'text') {
+            // Try JSON first
+            xformers['json'].toJson(respData, resolve, (jsonError) => {
+                // if JSON parsing fails, try XML
+                xformers['xml'].toJson(respData, resolve, reject);
+            });
+        }
+        else {
+            reject({message:"No transformer available", type:mediaType.type, subType:mediaType.subtype});
+        }
+    });
+}
 
-function sniffMediaType(res, respData, args) {
+
+const sniffMediaType = (res, respData, args) => {
     // 1. If there is a patch, call it to get the media type.
-    var mediaType = args.resource.patchMediaType(res.statusCode, res.headers, respData, args)
+    let mediaType = args.resource.patchMediaType(res.statusCode, res.headers, respData, args)
         || res.headers['content-type'];
 
     // 2. If the media type is "XML", treat it as "application/xml"

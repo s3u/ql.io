@@ -2,14 +2,24 @@ const Engine = require('../lib/engine');
 const fs = require('fs');
 const http = require('http');
 
+// Test configuration constants
+const PORTS = {
+    TARGET_SERVER: 3000,
+    SPECIFIC_PROXY: 3003,
+    WILDCARD_PROXY: 3004
+};
+
+const TIMEOUTS = {
+    REQUEST: 5000,
+    TEST: 8000
+};
+
 describe('proxy test Tests', () => {
-    let engine;
     let servers = [];
 
     beforeEach(() => {
-        engine = new Engine({
-            tables: __dirname + '/tables'
-        });
+        // Reset servers array for each test
+        servers = [];
     });
 
     afterEach(async () => {
@@ -49,7 +59,7 @@ describe('proxy test Tests', () => {
             const url = URL.parse(req.url, false);
             const options = {
                 host: 'localhost',
-                port: 3000,
+                port: PORTS.TARGET_SERVER,
                 path: url.pathname,
                 method: req.method,
                 headers: req.headers
@@ -79,13 +89,19 @@ describe('proxy test Tests', () => {
         });
         
         // Start servers
-        await new Promise((resolve) => {
-            targetServer.listen(3000, resolve);
+        await new Promise((resolve, reject) => {
+            targetServer.listen(PORTS.TARGET_SERVER, (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
         });
         servers.push(targetServer);
         
-        await new Promise((resolve) => {
-            proxyServer.listen(3003, resolve);
+        await new Promise((resolve, reject) => {
+            proxyServer.listen(PORTS.SPECIFIC_PROXY, (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
         });
         servers.push(proxyServer);
         
@@ -106,8 +122,8 @@ describe('proxy test Tests', () => {
         
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 10 seconds'));
-            }, 10000);
+                reject(new Error(`Specific proxy test timed out after ${TIMEOUTS.TEST}ms. This may indicate proxy configuration issues or network problems.`));
+            }, TIMEOUTS.TEST);
             
             testEngine.execute(script, function(emitter) {
                 expect(emitter).toBeDefined();
@@ -162,10 +178,11 @@ describe('proxy test Tests', () => {
             const url = URL.parse(req.url, false);
             const options = {
                 host: 'localhost',
-                port: 3000,
+                port: PORTS.TARGET_SERVER,
                 path: url.pathname,
                 method: req.method,
-                headers: req.headers
+                headers: req.headers,
+                timeout: TIMEOUTS.REQUEST  // Add timeout to prevent hanging
             };
             
             const proxyRequest = http.request(options, function(proxyResponse) {
@@ -176,6 +193,13 @@ describe('proxy test Tests', () => {
                 proxyResponse.on('end', function() {
                     res.end();
                 });
+            });
+            
+            // Add timeout handling
+            proxyRequest.setTimeout(TIMEOUTS.REQUEST, function() {
+                proxyRequest.destroy();
+                res.writeHead(504);
+                res.end('Gateway Timeout');
             });
             
             req.on('data', function(chunk) {
@@ -191,14 +215,20 @@ describe('proxy test Tests', () => {
             });
         });
         
-        // Start servers
-        await new Promise((resolve) => {
-            targetServer.listen(3000, resolve);
+        // Start servers with error handling
+        await new Promise((resolve, reject) => {
+            targetServer.listen(3000, (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
         });
         servers.push(targetServer);
         
-        await new Promise((resolve) => {
-            wildcardProxyServer.listen(3004, resolve);
+        await new Promise((resolve, reject) => {
+            wildcardProxyServer.listen(PORTS.WILDCARD_PROXY, (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
         });
         servers.push(wildcardProxyServer);
         
@@ -219,8 +249,8 @@ describe('proxy test Tests', () => {
         
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 10 seconds'));
-            }, 10000);
+                reject(new Error(`Wildcard proxy test timed out after ${TIMEOUTS.TEST}ms. This may indicate proxy configuration issues or network problems.`));
+            }, TIMEOUTS.TEST);
             
             testEngine.execute(script, function(emitter) {
                 expect(emitter).toBeDefined();
