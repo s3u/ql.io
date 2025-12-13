@@ -16,62 +16,78 @@
 
 'use strict';
 
-var compiler = require('ql.io-compiler'),
-    fs = require('fs'),
-    url = require('url'),
-    assert = require('assert'),
-    _ = require('underscore'),
-    { marked } = require('marked');
+const compiler = require('ql.io-compiler');
+const fs = require('fs').promises;
+const fsSync = require('fs');
+const url = require('url');
+const assert = require('assert');
+const _ = require('underscore');
+const { marked } = require('marked');
 
 // TODO: Watch for file changes
 exports.load = function (opts) {
-    var tablesInfo = opts.tables;
-    var rootdir = opts.routes;
-    var logEmitter = opts.logEmitter;
+    const { tables: tablesInfo, routes: rootdir, logEmitter } = opts;
 
     if (!rootdir) {
         return {};
     }
 
-    var routes = {
-        simpleMap:{},
-        verbMap:{}
+    const routes = {
+        simpleMap: {},
+        verbMap: {}
     };
-    logEmitter.emitEvent('Loading tables from ' + rootdir);
+    logEmitter.emitEvent(`Loading routes from ${rootdir}`);
     loadInternal(rootdir, '', logEmitter, routes, tablesInfo);
     return routes;
+};
 
+// Async version for future use
+exports.loadAsync = async function (opts) {
+    const { tables: tablesInfo, routes: rootdir, logEmitter } = opts;
+
+    if (!rootdir) {
+        return {};
+    }
+
+    const routes = {
+        simpleMap: {},
+        verbMap: {}
+    };
+    logEmitter.emitEvent(`Loading routes from ${rootdir}`);
+    await loadInternalAsync(rootdir, '', logEmitter, routes, tablesInfo);
+    return routes;
 };
 
 function loadInternal(path, prefix, logEmitter, routes, tablesInfo) {
     assert.ok(path, 'path should not be null');
 
-    var script, stats, paths;
-    path = path.charAt(path.length - 1) == '/' ? path : path + '/';
+    const normalizedPath = path.endsWith('/') ? path : `${path}/`;
+    let paths;
+    
     try {
-        paths = fs.readdirSync(path);
+        paths = fsSync.readdirSync(normalizedPath);
     }
     catch(e) {
-        logEmitter.emitError('Unable to load routes from ' + path);
+        logEmitter.emitError(`Unable to load routes from ${normalizedPath}`);
         return;
     }
 
-    paths.forEach(function(filename) {
-        stats = fs.statSync(path + filename);
+    paths.forEach(filename => {
+        const stats = fsSync.statSync(normalizedPath + filename);
         if (stats.isDirectory()) {
-            loadInternal(path + filename,
-                prefix.length > 0 ? prefix + '.' + filename : filename,
+            loadInternal(normalizedPath + filename,
+                prefix.length > 0 ? `${prefix}.${filename}` : filename,
                 logEmitter, routes, tablesInfo);
         }
         else if (stats.isFile() && /\.ql/.test(filename)) {
-            var cooked = null,
+            let cooked = null,
                 typeReturn = null,
                 pieces = null,
                 tables = [],
                 info = [];
 
             // Load route mapping files from the disk
-            script = fs.readFileSync(path + filename, 'utf8');
+            const script = fsSync.readFileSync(normalizedPath + filename, 'utf8');
             /*
              1. Check if script can be cooked
              2. Cooked Script contains 'return' statement
@@ -98,7 +114,7 @@ function loadInternal(path, prefix, logEmitter, routes, tablesInfo) {
                 cooked = undefined;
             }
             // Find the return statement with route info
-            var returnStatement = null;
+            let returnStatement = null;
             if (cooked && Array.isArray(cooked)) {
                 returnStatement = cooked.find(function(stmt) {
                     return stmt.type === 'return' && stmt.route;
@@ -135,7 +151,7 @@ function loadInternal(path, prefix, logEmitter, routes, tablesInfo) {
                 if (!_.detect(routes.verbMap[pieces.pathname][typeReturn.route.method], function(record) {
                     return _.isEqual(record.query, pieces.query);
                 })) {
-                    var routeRecord = {
+                    const routeRecord = {
                             script: cooked,
                             originalScript: script,
                             query: pieces.query,
@@ -146,7 +162,7 @@ function loadInternal(path, prefix, logEmitter, routes, tablesInfo) {
                     routes.verbMap[pieces.pathname][typeReturn.route.method].push(routeRecord);
                     routes.simpleMap[typeReturn.route.method + ':' + typeReturn.route.path.value]=routeRecord;
                     _.each(tables, function(table){
-                        var tableDef = tablesInfo[table];
+                        const tableDef = tablesInfo[table];
                         if(tableDef){
                             tableDef.routes = tableDef.routes || [];
                             tableDef.routes.push('/route?path=' +
@@ -157,10 +173,9 @@ function loadInternal(path, prefix, logEmitter, routes, tablesInfo) {
                 } else {
                     logEmitter.emitError("Route already defined: " + script);
                 }
+            } else {
+                logEmitter.emitError("Script doesn't contain route information: " + script);
             }
-        }
-        else {
-            logEmitter.emitError("Script doesn't contain route information: " + script);
         }
     });
 }
@@ -212,4 +227,136 @@ function findTablesFromStatement(statement) {
         return entry && !(entry.indexOf("{") === 0);
     });
     return tables;
+}
+
+// Async version of loadInternal
+async function loadInternalAsync(path, prefix, logEmitter, routes, tablesInfo) {
+    assert.ok(path, 'path should not be null');
+
+    const normalizedPath = path.endsWith('/') ? path : `${path}/`;
+    
+    try {
+        const paths = await fs.readdir(normalizedPath);
+        
+        // Process files sequentially to maintain order
+        for (const filename of paths) {
+            try {
+                const stats = await fs.stat(normalizedPath + filename);
+                
+                if (stats.isDirectory()) {
+                    await loadInternalAsync(normalizedPath + filename,
+                        prefix.length > 0 ? `${prefix}.${filename}` : filename,
+                        logEmitter, routes, tablesInfo);
+                }
+                else if (stats.isFile() && /\.ql/.test(filename)) {
+                    let cooked = null,
+                        typeReturn = null,
+                        pieces = null,
+                        tables = [],
+                        info = [];
+
+                    // Load route mapping files from the disk
+                    const script = await fs.readFile(normalizedPath + filename, 'utf8');
+                    
+                    /*
+                     1. Check if script can be cooked
+                     2. Cooked Script contains 'return' statement
+                     3. 'return' statement contains 'route'
+                     4. 'route' can be parsed in to its pieces
+                     5. Pieces contain path
+                     */
+                    try {
+                        cooked = compiler.compile(script);
+                        
+                        // Find tables from all statements
+                        tables = [];
+                        if (Array.isArray(cooked)) {
+                            cooked.forEach(stmt => {
+                                tables = tables.concat(findTables(stmt));
+                            });
+                        }
+                        
+                        info = getRouteInfo(cooked);
+                    }
+                    catch(e) {
+                        logEmitter.emitWarning(`Error loading route ${normalizedPath + filename}`);
+                        logEmitter.emitWarning(e.stack || e);
+                        cooked = undefined;
+                    }
+                    
+                    // Find the return statement with route info
+                    let returnStatement = null;
+                    if (cooked && Array.isArray(cooked)) {
+                        returnStatement = cooked.find(stmt => {
+                            return stmt.type === 'return' && stmt.route;
+                        });
+                    }
+                    
+                    if (returnStatement &&
+                        // get statement return
+                        (typeReturn = returnStatement) &&
+                        typeReturn.route?.path?.value &&
+                        (pieces = url.parse(typeReturn.route.path.value, true, false)) &&
+                        pieces.pathname
+                        ) {
+                        pieces.pathname = pieces.pathname.replace(/\{/g, ':').replace(/\}/g, ''); // replace {name} with :name
+                        _.each(pieces.query, (v, k) => { // replace {name} in query with name
+                            if (/\{.*\}/.test(v)) {
+                                pieces.query[k] = v.replace(/\{/g, '').replace(/\}/g, '');
+                            } else {
+                                logEmitter.emitError('Invalid query string, {} missing in script for query param value: '
+                                    + script);
+                                delete pieces.query[k];
+                            }
+                        });
+                        
+                        // get the http verb .. default 'get'
+                        typeReturn.route.method = typeReturn.route.method || 'get';
+                        typeReturn.route.method = typeReturn.route.method === 'delete' ? 'del' : typeReturn.route.method;
+
+                        // Get record for given route
+                        routes.verbMap[pieces.pathname] = routes.verbMap[pieces.pathname] || {};
+                        // Get record for http verb in the route record
+                        routes.verbMap[pieces.pathname][typeReturn.route.method] = routes.verbMap[pieces.pathname][typeReturn.route.method] || [];
+                        
+                        // Add info for the current route
+                        if (!_.detect(routes.verbMap[pieces.pathname][typeReturn.route.method], record => {
+                            return _.isEqual(record.query, pieces.query);
+                        })) {
+                            const routeRecord = {
+                                script: cooked,
+                                originalScript: script,
+                                query: pieces.query,
+                                routeInfo: typeReturn.route,
+                                tables: tables,
+                                info: marked(info.join('\r\n'))
+                            };
+                            routes.verbMap[pieces.pathname][typeReturn.route.method].push(routeRecord);
+                            routes.simpleMap[typeReturn.route.method + ':' + typeReturn.route.path.value] = routeRecord;
+                            
+                            _.each(tables, table => {
+                                const tableDef = tablesInfo[table];
+                                if(tableDef) {
+                                    tableDef.routes = tableDef.routes || [];
+                                    tableDef.routes.push('/route?path=' +
+                                        encodeURIComponent(typeReturn.route.path.value) + '&method='
+                                        + typeReturn.route.method);
+                                }
+                            });
+                        } else {
+                            logEmitter.emitError("Route already defined: " + script);
+                        }
+                    } else {
+                        logEmitter.emitError("Script doesn't contain route information: " + script);
+                    }
+                }
+            } catch (fileError) {
+                logEmitter.emitError(`Error processing route file ${filename}: ${fileError.message}`);
+            }
+        }
+    }
+    catch(e) {
+        logEmitter.emitError(`Unable to load routes from ${normalizedPath}`);
+        throw e;
+    }
 }

@@ -20,7 +20,8 @@
 
 'use strict';
 
-const fs = require('fs');
+const fs = require('fs').promises;
+const fsSync = require('fs');
 
 exports.load = function(opts) {
     opts = opts || {};
@@ -34,7 +35,7 @@ exports.load = function(opts) {
     try {
         // Load the file
         logEmitter.emitEvent(`Loading config from ${file}`);
-        text = fs.readFileSync(file, 'UTF-8');
+        text = fsSync.readFileSync(file, 'UTF-8');
     }
     catch (e) {
         logEmitter.emitError(`Unable to load config from ${file}`);
@@ -47,6 +48,34 @@ exports.load = function(opts) {
     catch (e) {
         logEmitter.emitError(`Error loading config file: ${file}`);
         console.log(e.stack || e);
+        return {};
+    }
+}
+
+// Async version for future use
+exports.loadAsync = async function(opts = {}) {
+    const { logEmitter, config: file } = opts;
+    
+    if(!file) {
+        return {};
+    }
+    
+    try {
+        // Load the file
+        logEmitter.emitEvent(`Loading config from ${file}`);
+        const text = await fs.readFile(file, 'UTF-8');
+        
+        try {
+            return JSON.parse(text);
+        }
+        catch (parseError) {
+            logEmitter.emitError(`Error parsing config file: ${file}`);
+            console.log(parseError.stack || parseError);
+            return {};
+        }
+    }
+    catch (readError) {
+        logEmitter.emitError(`Unable to load config from ${file}`);
         return {};
     }
 }
