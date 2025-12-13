@@ -20,114 +20,137 @@ describe('insert into test Tests', () => {
         }
     });
 
-    test('insert into', async () => {
+    test('insert into table with HTTP endpoint', async () => {
+        const http = require('http');
+        
+        // Create mock server to receive INSERT requests
+        server = http.createServer(function(req, res) {
+            let body = '';
+            req.on('data', function(chunk) {
+                body += chunk;
+            });
+            req.on('end', function() {
+                try {
+                    const data = JSON.parse(body);
+                    expect(data).toBeDefined();
+                    expect(data.name).toBeDefined();
+                    
+                    res.writeHead(200, {
+                        'Content-Type': 'application/json'
+                    });
+                    res.end(JSON.stringify({
+                        success: true,
+                        inserted: data
+                    }));
+                } catch (e) {
+                    res.writeHead(400);
+                    res.end('Bad Request');
+                }
+            });
+        });
+        
+        await new Promise((resolve) => {
+            server.listen(3000, resolve);
+        });
+        
+        const testEngine = new Engine({
+            tables: __dirname + '/tables'
+        });
+        
+        const script = `
+            insert into insert.into (name) values ("test user")
+        `;
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 reject(new Error('Test timed out after 15 seconds'));
             }, 15000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var server = http.createServer(function (req, res) {
-            //             res.writeHead(200, {
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        if (err) {
+                            expect(err).toBeDefined();
+                            reject(new Error('Insert test failed: ' + (err.message || JSON.stringify(err))));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        
+                        // Should have successful insert response
+                        expect(result.body.success).toBe(true);
+                        expect(result.body.inserted).toBeDefined();
+                        expect(result.body.inserted.name).toBe('test user');
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                    expect(err).toBeDefined();
+                    reject(new Error('Insert error: ' + err.message));
+                });
+            });
         });
     }, 15000);
-    test('insert json', async () => {
+    test('insert json data into context variable', async () => {
+        const testEngine = new Engine({
+            tables: __dirname + '/tables'
+        });
+        
+        const script = `
+            user = {"id": 1, "name": "John Doe"};
+            updated = insert into user (email, status) values ("john@example.com", "active");
+            return updated;
+        `;
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 reject(new Error('Test timed out after 15 seconds'));
             }, 15000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var server = http.createServer(function (req, res) {
-            //             res.writeHead(200, {
-            
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        if (err) {
+                            expect(err).toBeDefined();
+                            reject(new Error('Insert JSON test failed: ' + err.message));
+                            return;
+                        }
+                        
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        
+                        // Should have original data plus inserted fields
+                        expect(result.body.id).toBe(1);
+                        expect(result.body.name).toBe('John Doe');
+                        expect(result.body.email).toBe('john@example.com');
+                        expect(result.body.status).toBe('active');
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                    expect(err).toBeDefined();
+                    reject(new Error('Insert JSON error: ' + err.message));
+                });
+            });
         });
     }, 15000);
 });

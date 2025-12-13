@@ -1,35 +1,14 @@
--- Variable Assignment Demo
--- Try: GET /demo-variables
+targetUser = "octocat";
+maxResults = 5;
 
--- Assign variables for reuse
-targetCountry = "Germany";
-maxResults = 10;
-
--- Use variables in queries
-countries = select name.common as country, capital, population, region 
-           from restcountries.country 
-           where name = {targetCountry};
-
-universities = select name, web_pages 
-              from universities.search 
-              where country = {targetCountry} 
-              limit {maxResults};
-
--- Calculate derived values
-countryData = countries[0];
-universityCount = universities.length;
+githubUser = select * from github.user where username = "{targetUser}";
+githubRepos = select * from github.repos where username = "{targetUser}" limit 5;
+posts = select * from jsonplaceholder.posts limit 5;
 
 return {
-  "search_parameters": {
-    "country": "{targetCountry}",
-    "max_results": "{maxResults}"
-  },
-  "country_info": {
-    "name": "{countryData.country}",
-    "capital": "{countryData.capital[0]}",
-    "population": "{countryData.population}",
-    "region": "{countryData.region}"
-  },
-  "universities": "{universities}",
-  "university_count": "{universityCount}"
-}
+  "target_user": "{targetUser}",
+  "max_results": "{maxResults}",
+  "github_user": "{githubUser[0]}",
+  "repositories": "{githubRepos}",
+  "sample_posts": "{posts}"
+} via route '/demo-variables' using method get

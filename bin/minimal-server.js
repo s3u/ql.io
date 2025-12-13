@@ -11,12 +11,23 @@ const path = require('path');
 
 console.log('🚀 Starting minimal ql.io server...');
 
+// Check if routes directory exists
+const routesPath = path.join(__dirname, '..', 'routes');
+console.log('Routes directory:', routesPath);
+console.log('Routes directory exists:', require('fs').existsSync(routesPath));
+if (require('fs').existsSync(routesPath)) {
+    const files = require('fs').readdirSync(routesPath);
+    console.log('Route files found:', files.filter(f => f.endsWith('.ql')));
+}
+
 // Create engine
 const engine = new Engine({
     tables: path.join(__dirname, '..', 'tables'),
-    routes: path.join(__dirname, '..', 'routes'),
+    routes: routesPath,
     config: path.join(__dirname, '..', 'config', 'dev.json')
 });
+
+console.log(`✅ Engine created with ${Object.keys(engine.routes.verbMap || {}).length} routes loaded`);
 
 // Create Express app
 const app = express();
@@ -24,16 +35,7 @@ const app = express();
 // Add JSON middleware
 app.use(express.json());
 
-// Basic routes
-app.get('/', (req, res) => {
-    res.json({
-        message: 'ql.io minimal server',
-        endpoints: {
-            tables: '/tables',
-            execute: '/q (POST with ql script in body)'
-        }
-    });
-});
+// Basic routes - will be overridden by dynamic routes if they exist
 
 app.get('/tables', (req, res) => {
     engine.execute('show tables', function(emitter) {
@@ -63,6 +65,50 @@ app.post('/q', (req, res) => {
         });
     });
 });
+
+// Add route handlers from engine
+console.log('🛣️  Setting up route handlers...');
+const routes = engine.routes ? engine.routes.verbMap : {};
+let routeCount = 0;
+
+Object.keys(routes).forEach(uri => {
+    const verbRoutes = routes[uri];
+    Object.keys(verbRoutes).forEach(verb => {
+        const verbRouteVariants = verbRoutes[verb];
+        
+        // Map 'del' to 'delete' for Express compatibility
+        const expressVerb = verb === 'del' ? 'delete' : verb;
+        
+        console.log(`   Adding route: ${expressVerb.toUpperCase()} ${uri}`);
+        routeCount++;
+        
+        app[expressVerb](uri, (req, res) => {
+            // Find matching route variant
+            const route = verbRouteVariants.find(variant => {
+                return true; // Simple matching - take the first variant
+            });
+            
+            if (!route) {
+                return res.status(400).json({ error: 'No matching route variant' });
+            }
+            
+            // Execute the route script using the same pattern as /q endpoint
+            const script = route.originalScript || route.script;
+            
+            engine.execute(script, function(emitter) {
+                emitter.on('end', function(err, result) {
+                    if (err) {
+                        res.status(500).json({ error: err.message });
+                    } else {
+                        res.json(result.body);
+                    }
+                });
+            });
+        });
+    });
+});
+
+console.log(`✅ Added ${routeCount} route handlers`);
 
 const port = 3000;
 app.listen(port, () => {

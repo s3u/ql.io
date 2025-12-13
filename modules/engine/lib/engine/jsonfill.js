@@ -149,8 +149,13 @@ function project(columns, items, bag, offset, limit) {
 
 // Given an item, filter it by column names, and attach the projected properties to the holder.
 function projectEach(item, columns, bag) {
+    // Handle select * case
+    if(columns && columns.name === '*') {
+        return item; // For select *, return the item as-is
+    }
+    
     // If columns have aliases, each row in the result set will be an object. If not, an array.
-    var holder = columns[0].alias ? {} : [], name, flatten, obj;
+    var holder = (_.isArray(columns) && columns[0] && columns[0].alias) ? {} : [], name, flatten, obj;
     _.each(columns, function(column) {
         // Flatten results as the selector may include '..'
         name = column.name.trim();

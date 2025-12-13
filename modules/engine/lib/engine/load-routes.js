@@ -81,8 +81,15 @@ function loadInternal(path, prefix, logEmitter, routes, tablesInfo) {
              */
             try {
                 cooked = compiler.compile(script);
-                tables = findTables(cooked.rhs);
-                tables = tables.concat(findTables(cooked));
+                
+                // Find tables from all statements
+                tables = [];
+                if (Array.isArray(cooked)) {
+                    cooked.forEach(function(stmt) {
+                        tables = tables.concat(findTables(stmt));
+                    });
+                }
+                
                 info = getRouteInfo(cooked);
             }
             catch(e) {
@@ -90,9 +97,17 @@ function loadInternal(path, prefix, logEmitter, routes, tablesInfo) {
                 logEmitter.emitWarning(e.stack || e);
                 cooked = undefined;
             }
-            if (cooked &&
+            // Find the return statement with route info
+            var returnStatement = null;
+            if (cooked && Array.isArray(cooked)) {
+                returnStatement = cooked.find(function(stmt) {
+                    return stmt.type === 'return' && stmt.route;
+                });
+            }
+            
+            if (returnStatement &&
                 // get statement return
-                (typeReturn = cooked) &&
+                (typeReturn = returnStatement) &&
                 typeReturn.route && typeReturn.route.path && typeReturn.route.path.value &&
                 (pieces = url.parse(typeReturn.route.path.value, true, false)) &&
                 pieces.pathname
@@ -122,6 +137,7 @@ function loadInternal(path, prefix, logEmitter, routes, tablesInfo) {
                 })) {
                     var routeRecord = {
                             script: cooked,
+                            originalScript: script,
                             query: pieces.query,
                             routeInfo: typeReturn.route,
                             tables: tables,
@@ -152,9 +168,19 @@ function loadInternal(path, prefix, logEmitter, routes, tablesInfo) {
 // all comment lines prior to Return statement
 function getRouteInfo(cooked){
     var info = [];
-    _.each(cooked.comments, function(comment) {
-        info.unshift(comment.text);
-    });
+    if (Array.isArray(cooked)) {
+        cooked.forEach(function(stmt) {
+            if (stmt.comments) {
+                _.each(stmt.comments, function(comment) {
+                    info.unshift(comment.text);
+                });
+            }
+        });
+    } else if (cooked && cooked.comments) {
+        _.each(cooked.comments, function(comment) {
+            info.unshift(comment.text);
+        });
+    }
     return info;
 }
 

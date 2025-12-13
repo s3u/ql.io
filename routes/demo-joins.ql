@@ -1,22 +1,27 @@
--- Advanced Demo: JOIN Operations
--- Try: GET /demo-joins
+-- Demonstrate JOIN operations using local data and API data
+posts = select * from jsonplaceholder.posts limit 3;
+users = select * from jsonplaceholder.users limit 3;
 
--- Get posts with user information (JOIN simulation)
-posts = select id, title, body, userId from jsonplaceholder.posts limit 5;
-users = select id, name, email, website from jsonplaceholder.users;
+-- Create local data for demonstration
+localPosts = [
+  {"id": 1, "title": "First Post", "userId": 1},
+  {"id": 2, "title": "Second Post", "userId": 2}
+];
 
--- Simulate JOIN by combining data
-postsWithUsers = select 
-  p.id as postId,
-  p.title,
-  p.body,
-  u.name as authorName,
-  u.email as authorEmail,
-  u.website as authorWebsite
-from posts as p, users as u 
-where p.userId = u.id;
+localUsers = [
+  {"id": 1, "name": "Alice", "email": "alice@example.com"},
+  {"id": 2, "name": "Bob", "email": "bob@example.com"}
+];
+
+-- Perform JOIN on local data (this syntax is supported)
+joinedLocal = select p.title, u.name, u.email 
+              from localPosts as p, localUsers as u 
+              where p.userId = u.id;
 
 return {
-  "posts_with_authors": "{postsWithUsers}",
-  "total_posts": "{postsWithUsers.length}"
-}
+  "api_posts": "{posts}",
+  "api_users": "{users}",
+  "local_joined_data": "{joinedLocal}",
+  "message": "JOIN demonstration using local data arrays",
+  "explanation": "Shows how to JOIN two datasets on a common field (userId = id)"
+} via route '/demo-joins' using method get

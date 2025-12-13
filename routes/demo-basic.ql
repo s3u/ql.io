@@ -1,17 +1,9 @@
--- Basic Demo: Simple API Calls
--- Try: GET /demo-basic
-
--- Get random cat fact
-catFact = select fact from catfacts.random;
-
--- Get your IP address
-ipInfo = select origin from httpbin.ip;
-
--- Get latest SpaceX launch
-launch = select name, date_utc, success from spacex.latest_launch;
+catFact = select * from catfacts.random;
+githubUser = select * from github.user where username = "octocat";
+posts = select * from jsonplaceholder.posts limit 3;
 
 return {
-  "cat_fact": "{catFact[0].fact}",
-  "your_ip": "{ipInfo[0].origin}",
-  "latest_spacex_launch": "{launch[0]}"
-}
+  "cat_fact": "{catFact[0]}",
+  "github_user": "{githubUser[0]}",
+  "sample_posts": "{posts}"
+} via route '/demo-basic' using method get

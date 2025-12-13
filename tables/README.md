@@ -2,25 +2,13 @@
 
 This directory contains table definitions that map external APIs to ql.io tables. These tables can be used in queries to fetch and combine data from various sources.
 
-## Available APIs
-
-### 🎨 Museum & Culture
-- **Metropolitan Museum** (`met.*`) - Art collection and museum data
-- **Rijksmuseum** (`rijks.*`) - Dutch art and cultural heritage
+## Available APIs (Fast & Reliable)
 
 ### 👥 Social & Development  
 - **GitHub API** (`github.*`) - Public repositories and user data
 - **JSONPlaceholder** (`jsonplaceholder.*`) - Fake REST API for testing
 
-### 🌍 Geographic & Reference
-- **REST Countries** (`restcountries.*`) - Comprehensive country information
-- **Universities** (`universities.*`) - Global university database
-
-### 🚀 Science & Technology
-- **SpaceX API** (`spacex.*`) - Space exploration and launch data
-
-### 🔧 Utilities & Testing
-- **HTTPBin** (`httpbin.*`) - HTTP request testing service
+### 🔧 Utilities & Fun
 - **Cat Facts** (`catfacts.*`) - Random cat facts (for fun examples)
 
 ## Quick Examples
@@ -33,11 +21,11 @@ show tables
 -- Get a random cat fact
 select fact from catfacts.random
 
--- Get your IP address
-select origin from httpbin.ip
+-- Get GitHub user info
+select login, name, public_repos from github.user where username = "octocat"
 
--- Get SpaceX company information
-select name, founder, founded from spacex.company
+-- Get blog posts
+select id, title, body from jsonplaceholder.posts limit 5
 ```
 
 ### Advanced Queries with Variables
@@ -63,29 +51,23 @@ return select p.title, u.name, u.email
 
 ### Conditional Logic
 ```sql
--- Get country info with fallback
-country = "Germany";
-info = select name.common, capital, population from restcountries.country where name = {country};
-if (info && info.length > 0) {
-  return {"country": info[0], "status": "found"}
+-- Get user info with fallback
+username = "octocat";
+user = select login, name, public_repos from github.user where username = {username};
+if (user && user.length > 0) {
+  return {"user": user[0], "status": "found"}
 } else {
-  return {"error": "Country not found", "status": "not_found"}
+  return {"error": "User not found", "status": "not_found"}
 }
 ```
 
 ## API Endpoints
 
-All APIs used are free and don't require authentication:
+All APIs used are free, fast (< 500ms), and don't require authentication:
 
 - **JSONPlaceholder**: `https://jsonplaceholder.typicode.com/`
 - **GitHub API**: `https://api.github.com/` (public data only)
-- **REST Countries**: `https://restcountries.com/v3.1/`
-- **SpaceX API**: `https://api.spacexdata.com/v4/`
-- **Universities**: `http://universities.hipolabs.com/`
 - **Cat Facts**: `https://catfact.ninja/`
-- **HTTPBin**: `https://httpbin.org/`
-- **Metropolitan Museum**: `https://collectionapi.metmuseum.org/`
-- **Rijksmuseum**: `https://www.rijksmuseum.nl/api/`
 
 ## Interactive Demos
 

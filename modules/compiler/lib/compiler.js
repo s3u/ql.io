@@ -70,7 +70,7 @@ function plan(compiled) {
             }
             if(line.assign) {
                 if(symbols[line.assign]) {
-                    throw new this.SyntaxError('Duplicate symbol ' + line.assign);
+                    throw new ql.SyntaxError('Duplicate symbol ' + line.assign);
                 }
                 else {
                     symbols[line.assign] = line;
@@ -113,7 +113,7 @@ function plan(compiled) {
 
         if(line.assign) {
             if(symbols[line.assign]) {
-                throw new this.SyntaxError('Duplicate symbol ' + line.assign);
+                throw new ql.SyntaxError('Duplicate symbol ' + line.assign);
             }
             else {
                 symbols[line.assign] = line;
@@ -456,7 +456,7 @@ function introspectFrom(line, froms, symbols, parent) {
         dependency = symbols[refname];
         if(dependency) {
             if(line.assign === refname) {
-                throw new this.SyntaxError('Circular reference ' + line.assign);
+                throw new ql.SyntaxError('Circular reference ' + line.assign);
             }
             else {
                 if(parent) {
@@ -507,7 +507,7 @@ function introspectWhere(line, symbols, parent) {
                                 }
                                 dependency = symbols[refname];
                                 if(line.assign === refname) {
-                                    throw new this.SyntaxError('Circular reference ' + line.assign);
+                                    throw new ql.SyntaxError('Circular reference ' + line.assign);
                                 }
                                 else if(dependency) {
                                     addDep(line, line.dependsOn, dependency, symbols);
@@ -540,7 +540,7 @@ function introspectWhere(line, symbols, parent) {
                         dependency = symbols[refname];
                         if(dependency) {
                             if(line.assign === refname) {
-                                throw new this.SyntaxError('Circular reference ' + line.assign);
+                                throw new ql.SyntaxError('Circular reference ' + line.assign);
                             }
                             else {
                                 addDep(parent || line, (parent || line).dependsOn, dependency, symbols);
@@ -557,14 +557,14 @@ function introspectWhere(line, symbols, parent) {
                     dependency = symbols[refname];
                     if(dependency) {
                         if(line.assign === refname) {
-                            throw new this.SyntaxError('Circular reference ' + line.assign);
+                            throw new ql.SyntaxError('Circular reference ' + line.assign);
                         }
                         else {
                             addDep(line, line.dependsOn, dependency, symbols);
                         }
                     }
                     else {
-                        throw new this.SyntaxError('UDF ' + where.name + ' not resolved')
+                        throw new ql.SyntaxError('UDF ' + where.name + ' not resolved')
                     }
                     break;
             }

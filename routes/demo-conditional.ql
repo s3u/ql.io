@@ -1,38 +1,16 @@
--- Conditional Logic Demo
--- Try: GET /demo-conditional
-
--- Get GitHub user (change username to test different scenarios)
+-- Demonstrate conditional logic using WHERE clauses
 username = "octocat";
-user = select * from github.user where username = {username};
+nonExistentUser = "nonexistentuser12345";
 
-if (user && user.length > 0) {
-  -- User exists, get their repositories
-  repos = select name, description, stargazers_count, language 
-          from github.repos 
-          where username = {username} 
-          limit 10;
-  
-  -- Sort by stars (simulated)
-  topRepos = select name, stargazers_count, language 
-             from repos 
-             where stargazers_count > 0;
-  
-  return {
-    "status": "success",
-    "user": {
-      "login": "{user[0].login}",
-      "name": "{user[0].name}",
-      "bio": "{user[0].bio}",
-      "public_repos": "{user[0].public_repos}",
-      "followers": "{user[0].followers}"
-    },
-    "top_repositories": "{topRepos}",
-    "repository_count": "{repos.length}"
-  }
-} else {
-  return {
-    "status": "error",
-    "message": "User '{username}' not found",
-    "suggestion": "Try 'octocat', 'torvalds', or 'gaearon'"
-  }
-}
+-- Conditional data fetching - will return data if user exists
+validUser = select * from github.user where username = "{username}";
+invalidUser = select * from github.user where username = "{nonExistentUser}";
+
+return {
+  "username_tested": "{username}",
+  "valid_user_data": "{validUser[0]}",
+  "invalid_username_tested": "{nonExistentUser}",
+  "invalid_user_data": "{invalidUser[0]}",
+  "message": "Conditional logic: comparing valid vs invalid usernames",
+  "explanation": "WHERE clauses act as conditional filters - valid user returns data, invalid returns null"
+} via route '/demo-conditional' using method get

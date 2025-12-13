@@ -21,468 +21,441 @@ describe('engine emitter new test Tests', () => {
         }
     });
 
-    test('compile-err', async () => {
+    test('should emit compile error events for invalid syntax', async () => {
+        const testEngine = new Engine({
+            tables: __dirname + '/tables',
+            config: __dirname + '/config/dev.json'
+        });
+        
+        const script = 'desca table foo'; // Invalid syntax - should be 'desc'
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var engine = new Engine({
-            //             tables : __dirname + '/tables',
-            //             config: __dirname + '/config/dev.json'
-            //         });
-            //         var script;
-            //         script = 'desca table foo';
-            //         var compileError = 0, ack = 0, done = 0;
-            //         engine.execute(script, function(req) {
-            //             req.on(Engine.Events.SCRIPT_ACK, function() {
-            //                 ack++;
-            //             });
-            //             req.on(Engine.Events.SCRIPT_COMPILE_ERROR, function() {
-            //                 compileError++;
-            //             });
-            //             req.on(Engine.Events.SCRIPT_DONE, function() {
-            //                 done++;
-            //             });
-            //             req.on('end', function() {
-            //                 test.equals(1, ack);
-            //                 test.equals(1, done);
-            //                 test.equals(1, compileError);
-            //                 test.done();
-            //             })
-            //         });
-            //     },
+            let compileError = 0, ack = 0, done = 0;
             
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on(Engine.Events.SCRIPT_ACK, function() {
+                    ack++;
+                });
+                
+                emitter.on(Engine.Events.SCRIPT_COMPILE_ERROR, function(event) {
+                    expect(event).toBeDefined();
+                    compileError++;
+                });
+                
+                emitter.on(Engine.Events.SCRIPT_DONE, function() {
+                    done++;
+                });
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        // Verify event counts
+                        expect(ack).toBe(1);
+                        expect(done).toBe(1);
+                        expect(compileError).toBe(1);
+                        
+                        // Should have error due to compile failure
+                        expect(err).toBeDefined();
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
+                    // Compile errors are expected, don't reject
                     resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
-    }, 15000);
-    test('show tables', async () => {
+    });
+    test('should emit success events for show tables command', async () => {
+        const testEngine = new Engine();
+        const script = 'show tables';
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var engine = new Engine();
-            //         var script;
-            //         script = 'show tables';
-            //         var inFlight = 0, success = 0, error = 0;
-            //         engine.execute(script, function(req) {
-            //             req.on(Engine.Events.STATEMENT_IN_FLIGHT, function() {
-            //                 inFlight++;
-            //             });
-            //             req.on(Engine.Events.STATEMENT_SUCCESS, function() {
-            //                 success++;
-            //             });
-            //             req.on(Engine.Events.STATEMENT_ERROR, function() {
-            //                 error++;
-            //             });
-            //             req.on('end', function() {
-            //                 test.equals(1, inFlight);
-            //                 test.equals(1, success);
-            //                 test.done();
-            //             })
-            //         });
-            //     },
+            let inFlight = 0, success = 0, error = 0;
             
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on(Engine.Events.STATEMENT_IN_FLIGHT, function(event) {
+                    expect(event).toBeDefined();
+                    inFlight++;
+                });
+                
+                emitter.on(Engine.Events.STATEMENT_SUCCESS, function(event) {
+                    expect(event).toBeDefined();
+                    success++;
+                });
+                
+                emitter.on(Engine.Events.STATEMENT_ERROR, function(event) {
+                    expect(event).toBeDefined();
+                    error++;
+                });
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        // Should not have error for show tables
+                        if (err) {
+                            expect(err).toBeDefined();
+                            reject(new Error('Unexpected error: ' + err.message));
+                            return;
+                        }
+                        
+                        // Verify event counts
+                        expect(inFlight).toBe(1);
+                        expect(success).toBe(1);
+                        expect(error).toBe(0);
+                        
+                        // Verify result
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                    expect(err).toBeDefined();
+                    reject(new Error('Show tables error: ' + err.message));
+                });
+            });
         });
-    }, 15000);
-    test('desc', async () => {
+    });
+    test('should emit error events for describe non-existent table', async () => {
+        const testEngine = new Engine({
+            tables: __dirname + '/tables',
+            config: __dirname + '/config/dev.json'
+        });
+        
+        const script = 'desc foo'; // 'foo' table doesn't exist
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var engine = new Engine({
-            //             tables : __dirname + '/tables',
-            //             config: __dirname + '/config/dev.json'
-            //         });
-            //         var script;
-            //         script = 'desc foo';
-            //         var inFlight = 0, success = 0, error = 0;
-            //         engine.execute(script, function(req) {
-            //             req.on(Engine.Events.STATEMENT_IN_FLIGHT, function() {
-            //                 inFlight++;
-            //             });
-            //             req.on(Engine.Events.STATEMENT_SUCCESS, function() {
-            //                 success++;
-            //             });
-            //             req.on(Engine.Events.STATEMENT_ERROR, function() {
-            //                 error++;
-            //             });
-            //             req.on('end', function() {
-            //                 test.equals(1, inFlight);
-            //                 test.equals(1, error);
-            //                 test.done();
-            //             })
-            //         })
-            //     },
+            let inFlight = 0, success = 0, error = 0;
             
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on(Engine.Events.STATEMENT_IN_FLIGHT, function(event) {
+                    expect(event).toBeDefined();
+                    inFlight++;
+                });
+                
+                emitter.on(Engine.Events.STATEMENT_SUCCESS, function(event) {
+                    expect(event).toBeDefined();
+                    success++;
+                });
+                
+                emitter.on(Engine.Events.STATEMENT_ERROR, function(event) {
+                    expect(event).toBeDefined();
+                    error++;
+                });
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        // Verify event counts - should have error for non-existent table
+                        expect(inFlight).toBe(1);
+                        expect(error).toBe(1);
+                        expect(success).toBe(0);
+                        
+                        // Should have error
+                        expect(err).toBeDefined();
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
+                    // Error is expected for non-existent table
+                    expect(err).toBeDefined();
                     resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
-    }, 15000);
-    test('select-error', async () => {
+    });
+    test('should emit error events for select from non-existent table', async () => {
+        const testEngine = new Engine({
+            tables: __dirname + '/tables',
+            config: __dirname + '/config/dev.json'
+        });
+        
+        // The table 'first' doesn't exist - should cause error
+        const script = 'select * from first';
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var engine = new Engine({
-            //             tables : __dirname + '/tables',
-            //             config: __dirname + '/config/dev.json'
-            //         });
-            //         var script;
-            //         //The table below doesn't exist. The test checks for due errors hence.
-            //         script = 'select * from first';
-            //         var inFlight = 0, success = 0, error = 0;
-            //         engine.execute(script, function(req) {
-            //             req.on(Engine.Events.STATEMENT_IN_FLIGHT, function() {
-            //                 inFlight++;
-            //             });
-            //             req.on(Engine.Events.STATEMENT_SUCCESS, function() {
-            //                 success++;
-            //             });
-            //             req.on(Engine.Events.STATEMENT_ERROR, function() {
-            //                 error++;
-            //             });
-            //             req.on('end', function() {
-            //                 test.equals(1, inFlight);
-            //                 test.equals(1, error, 'Did not get an error');
-            //                 test.done();
-            //             })
-            //         })
-            //     },
+            let inFlight = 0, success = 0, error = 0;
             
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on(Engine.Events.STATEMENT_IN_FLIGHT, function(event) {
+                    expect(event).toBeDefined();
+                    inFlight++;
+                });
+                
+                emitter.on(Engine.Events.STATEMENT_SUCCESS, function(event) {
+                    expect(event).toBeDefined();
+                    success++;
+                });
+                
+                emitter.on(Engine.Events.STATEMENT_ERROR, function(event) {
+                    expect(event).toBeDefined();
+                    error++;
+                });
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        // Verify event counts - should have error for non-existent table
+                        expect(inFlight).toBe(1);
+                        expect(error).toBe(1);
+                        expect(success).toBe(0);
+                        
+                        // Should have error
+                        expect(err).toBeDefined();
+                        if (err.message) {
+                            expect(err.message).toBeDefined();
+                        }
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
+                    // Error is expected for non-existent table
+                    expect(err).toBeDefined();
                     resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                });
+            });
         });
-    }, 15000);
-    test('select-ok', async () => {
+    });
+    test('should emit success events for valid select query', async () => {
+        const http = require('http');
+        const fs = require('fs');
+        
+        // Create mock server to serve test data
+        server = http.createServer(function(req, res) {
+            const file = __dirname + '/mock' + req.url;
+            try {
+                const stat = fs.statSync(file);
+                res.writeHead(200, {
+                    'Content-Type': 'application/json',
+                    'Content-Length': stat.size
+                });
+                const readStream = fs.createReadStream(file);
+                readStream.pipe(res);
+            } catch (e) {
+                res.writeHead(404);
+                res.end('Not found');
+            }
+        });
+        
+        await new Promise((resolve) => {
+            server.listen(3000, resolve);
+        });
+        
+        const testEngine = new Engine({
+            tables: __dirname + '/tables',
+            config: __dirname + '/config/dev.json'
+        });
+        
+        // Use the eng-emit2 table that exists in mock files
+        const script = `
+            create table first on select get from "http://localhost:3000/eng-emit2.json"
+            select * from first where keyword = "ipad"
+        `;
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var server = http.createServer(function(req, res) {
-            //             var file = __dirname + '/mock' + req.url;
-            //             var stat = fs.statSync(file);
-            //             res.writeHead(200, req.headers, {
+            let inFlight = 0, success = 0, error = 0;
             
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on(Engine.Events.STATEMENT_IN_FLIGHT, function(event) {
+                    expect(event).toBeDefined();
+                    inFlight++;
+                });
+                
+                emitter.on(Engine.Events.STATEMENT_SUCCESS, function(event) {
+                    expect(event).toBeDefined();
+                    success++;
+                });
+                
+                emitter.on(Engine.Events.STATEMENT_ERROR, function(event) {
+                    expect(event).toBeDefined();
+                    error++;
+                });
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        // Should not have error for valid select
+                        if (err) {
+                            expect(err).toBeDefined();
+                            reject(new Error('Unexpected error: ' + err.message));
+                            return;
+                        }
+                        
+                        // Verify event counts
+                        expect(inFlight).toBeGreaterThan(0);
+                        expect(success).toBeGreaterThan(0);
+                        expect(error).toBe(0);
+                        
+                        // Verify result
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                    expect(err).toBeDefined();
+                    reject(new Error('Select error: ' + err.message));
+                });
+            });
         });
-    }, 15000);
-    test('define', async () => {
+    });
+    test('should emit correct events for multi-statement script with local data', async () => {
+        const testEngine = new Engine({
+            tables: __dirname + '/tables',
+            config: __dirname + '/config/dev.json'
+        });
+        
+        const script = `data = {
+            "name": {
+                "first": "Hello",
+                "last": "World"
+            },
+            "addresses": [
+                {
+                    "street": "1 Main Street",
+                    "city": "No Name"
+                },
+                {
+                    "street": "2 Main Street", 
+                    "city": "Some Name"
+                }
+            ]
+        };
+        fields = select addresses[0].street, addresses[1].city, name.last from data;
+        return {"result": "{fields}"};`;
+        
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Test timed out after 15 seconds'));
-            }, 15000);
+                reject(new Error('Test timed out after 10 seconds'));
+            }, 10000);
             
-            // TODO: Convert nodeunit test body to Jest format
-            // Original test body:
-                        // var engine = new Engine({
-            //             tables : __dirname + '/tables',
-            //             config: __dirname + '/config/dev.json'
-            //         });
-            //         var script = 'data = {\
-            //                 "name" : {\
-            //                     "first" : "Hello",\
-            //                     "last" : "World"\
-            //                 },\
-            //                 "addresses" : [\
-            //                     {\
-            //                         "street" : "1 Main Street",\
-            //                         "city" : "No Name"\
-            //                     },\
-            //                     {\
-            //                         "street" : "2 Main Street",\
-            //                         "city" : "Some Name"\
-            //                     }]\
-            //             };\
-            //             fields = select addresses[0].street, addresses[1].city, name.last from data;\
-            //             return {"result" : "{fields}"};'
-            //         var ack = 0, done = 0, inFlight = 0, success = 0, error = 0;
-            //         engine.execute(script, function(req) {
-            //             req.on(Engine.Events.SCRIPT_ACK, function() {
-            //                 ack++;
-            //             });
-            //             req.on(Engine.Events.STATEMENT_IN_FLIGHT, function() {
-            //                 inFlight++;
-            //             });
-            //             req.on(Engine.Events.STATEMENT_SUCCESS, function() {
-            //                 success++;
-            //             });
-            //             req.on(Engine.Events.STATEMENT_ERROR, function() {
-            //                 error++;
-            //             });
-            //             req.on(Engine.Events.SCRIPT_DONE, function() {
-            //                 done++;
-            //             });
-            //             req.on('end', function() {
-            //                 test.equals(1, ack);
-            //                 test.equals(3, inFlight);
-            //                 test.equals(3, success, 'Failed');
-            //                 test.equals(1, done);
-            //                 test.done();
-            //             })
-            //         })
-            //     }
+            let ack = 0, done = 0, inFlight = 0, success = 0, error = 0;
             
-            // Mock test object for nodeunit compatibility
-            const test = {
-                ok: (condition, message) => {
+            testEngine.execute(script, function(emitter) {
+                expect(emitter).toBeDefined();
+                
+                emitter.on(Engine.Events.SCRIPT_ACK, function(event) {
+                    expect(event).toBeDefined();
+                    ack++;
+                });
+                
+                emitter.on(Engine.Events.STATEMENT_IN_FLIGHT, function(event) {
+                    expect(event).toBeDefined();
+                    inFlight++;
+                });
+                
+                emitter.on(Engine.Events.STATEMENT_SUCCESS, function(event) {
+                    expect(event).toBeDefined();
+                    success++;
+                });
+                
+                emitter.on(Engine.Events.STATEMENT_ERROR, function(event) {
+                    expect(event).toBeDefined();
+                    error++;
+                });
+                
+                emitter.on(Engine.Events.SCRIPT_DONE, function(event) {
+                    expect(event).toBeDefined();
+                    done++;
+                });
+                
+                emitter.on('end', function(err, result) {
                     clearTimeout(timeout);
+                    
                     try {
-                        expect(condition).toBe(true);
+                        // Should not have error for valid script
+                        if (err) {
+                            expect(err).toBeDefined();
+                            reject(new Error('Unexpected error: ' + err.message));
+                            return;
+                        }
+                        
+                        // Verify event counts
+                        expect(ack).toBe(1);
+                        expect(inFlight).toBe(3); // data assignment, fields select, return
+                        expect(success).toBe(3);
+                        expect(error).toBe(0);
+                        expect(done).toBe(1);
+                        
+                        // Verify result
+                        expect(result).toBeDefined();
+                        expect(result.body).toBeDefined();
+                        expect(typeof result.body).toBe('object');
+                        expect(result.body.result).toBeDefined();
+                        
                         resolve();
                     } catch (e) {
-                        reject(new Error(message || 'Assertion failed'));
+                        reject(e);
                     }
-                },
-                equals: (actual, expected, message) => {
+                });
+                
+                emitter.on('error', function(err) {
                     clearTimeout(timeout);
-                    try {
-                        expect(actual).toBe(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Values not equal'));
-                    }
-                },
-                deepEqual: (actual, expected, message) => {
-                    clearTimeout(timeout);
-                    try {
-                        expect(actual).toEqual(expected);
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(message || 'Objects not equal'));
-                    }
-                },
-                fail: (message) => {
-                    clearTimeout(timeout);
-                    reject(new Error(message || 'Test failed'));
-                },
-                done: () => {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            };
-            
-            // Execute original test logic (commented out - needs manual conversion)
-            clearTimeout(timeout);
-            resolve(); // Placeholder - remove when implementing actual test
+                    expect(err).toBeDefined();
+                    reject(new Error('Script execution error: ' + err.message));
+                });
+            });
         });
-    }, 15000);
+    });
 });
