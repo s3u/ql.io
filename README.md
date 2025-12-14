@@ -7,6 +7,8 @@
 
 A declarative data retrieval and aggregation gateway for HTTP APIs. Write SQL-like queries to fetch and combine data from multiple REST endpoints.
 
+**AI-Modernized**: This project was completely modernized by AI from the original [ql.io repository](https://github.com/ql-io/ql.io). The legacy 2011-2013 Node.js 0.8+ codebase was transformed into a modern, high-performance system with ES2020+ JavaScript, comprehensive testing, and advanced optimizations.
+
 ## What it does
 
 ql.io lets you:
