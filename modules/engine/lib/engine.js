@@ -205,6 +205,8 @@ Engine.prototype.execute = function(){
     arguments[1].parentEvent = parentEvent;
     this.doExecute.apply(this,arguments);
 }
+
+
 /*
 The real logic of engine execution
  */
@@ -525,6 +527,7 @@ Engine.prototype.doExecute = function() {
                 statement.lock = true;
             }
         }
+
         _.each(statement.dependsOn, function(dependency) {
             // Handle both old format (dependency is object) and new format (dependency is ID)
             let depId, depStatement;
@@ -545,6 +548,7 @@ Engine.prototype.doExecute = function() {
                 sweep(depStatement);
             }
         });
+
         if(statement.rhs) {
             _.each(statement.rhs.dependsOn, function(dependency) {
                 // Handle both old format (dependency is object) and new format (dependency is ID)
@@ -608,6 +612,8 @@ Engine.prototype.doExecute = function() {
             }
         }
     }
+
+
 
     const execOneStatement = function(statement) {
         if (!statement) {
