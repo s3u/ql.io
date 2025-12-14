@@ -7,7 +7,7 @@ describe('Show Routes Execution Tests', () => {
     beforeEach(() => {
         engine = new Engine({
             tables: path.join(__dirname, 'tables'),
-            routes: path.join(__dirname, '..', '..', '..', 'routes'),
+            routes: path.join(__dirname, 'mock-routes', 'routes'),
             config: path.join(__dirname, 'config/dev.json')
         });
     });
@@ -67,7 +67,7 @@ describe('Show Routes Execution Tests', () => {
     });
     
     test('should describe specific route using correct syntax', async () => {
-        const script = 'describe route "/" using method get';
+        const script = 'describe route "/bitly/shorten" using method post';
         
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {

@@ -11,10 +11,19 @@ const path = require('path');
 
 console.log('🚀 Starting minimal ql.io server...');
 
+// Get demo directory from command line argument or use default
+const demoDir = process.argv[2] || 'demos';
+const basePath = path.join(__dirname, '..');
+
 // Check if routes directory exists
-const routesPath = path.join(__dirname, '..', 'routes');
+const routesPath = path.join(basePath, demoDir, 'routes');
+const tablesPath = path.join(basePath, demoDir, 'tables');
+
+console.log('Demo directory:', demoDir);
+console.log('Tables directory:', tablesPath);
 console.log('Routes directory:', routesPath);
 console.log('Routes directory exists:', require('fs').existsSync(routesPath));
+
 if (require('fs').existsSync(routesPath)) {
     const files = require('fs').readdirSync(routesPath);
     console.log('Route files found:', files.filter(f => f.endsWith('.ql')));
@@ -22,9 +31,9 @@ if (require('fs').existsSync(routesPath)) {
 
 // Create engine
 const engine = new Engine({
-    tables: path.join(__dirname, '..', 'tables'),
+    tables: tablesPath,
     routes: routesPath,
-    config: path.join(__dirname, '..', 'config', 'dev.json')
+    config: path.join(basePath, 'config', 'dev.json')
 });
 
 console.log(`✅ Engine created with ${Object.keys(engine.routes.verbMap || {}).length} routes loaded`);

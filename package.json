@@ -24,10 +24,12 @@
         "test:mutable-uri": "npm test --workspace=modules/mutable-uri",
         "test:str-template": "npm test --workspace=modules/str-template",
         "test:uri-template": "npm test --workspace=modules/uri-template",
-        "test:integration": "npm test --workspace=modules/engine -- test/tables-routes-integration.test.js",
+        "test:integration": "jest --config ./config/jest.integration.config.js",
+        "test:demo": "jest --config ./config/jest.integration.config.js",
+        "test:demo-watch": "jest --config ./config/jest.integration.config.js --watch",
         "test:tables-routes": "node bin/test-tables-routes.js",
         "test:all": "bin/test-all.sh",
-        "test:performance": "node test-performance.js",
+        "test:performance": "node tools/test-performance.js",
         "clean": "rm -rf node_modules modules/*/node_modules"
     },
     "devDependencies": {

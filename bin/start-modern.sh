@@ -43,7 +43,7 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 echo "🔧 Starting backend API server..."
-node bin/minimal-server.js &
+node bin/minimal-server.js demos &
 BACKEND_PID=$!
 
 # Wait a moment for backend to start
@@ -68,16 +68,17 @@ cd ..
 sleep 3
 
 echo ""
-echo "🎉 Modern Console is ready!"
+echo "🎉 ql.io Console is ready!"
 echo ""
-echo "📱 Modern Console: http://localhost:3001"
+echo "📱 Console UI: http://localhost:3001"
 echo "🔧 Backend API: http://localhost:3000"
 echo "📋 Tables API: http://localhost:3000/tables"
 echo ""
-echo "💡 Try these queries in the modern console:"
+echo "💡 Try these queries in the console:"
 echo "   show tables"
-echo "   select title, principalOrFirstMaker from rijks.collection where query=\"Van Gogh\" limit 5"
-echo "   select * from met.departments"
+echo "   select fact from catfacts.random"
+echo "   select id, title from jsonplaceholder.posts limit 3"
+echo "   select login, name from github.user where username = \"octocat\""
 echo ""
 echo "⌨️  Keyboard shortcuts:"
 echo "   Ctrl+Enter: Execute query"
