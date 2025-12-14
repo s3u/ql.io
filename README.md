@@ -1,6 +1,10 @@
 
 # ql.io
 
+[![CI](https://github.com/s3u/ql.io/workflows/CI/badge.svg)](https://github.com/s3u/ql.io/actions/workflows/ci.yml)
+[![Core Tests](https://github.com/s3u/ql.io/workflows/Core%20Tests/badge.svg)](https://github.com/s3u/ql.io/actions/workflows/test-core.yml)
+[![Status](https://github.com/s3u/ql.io/workflows/Status/badge.svg)](https://github.com/s3u/ql.io/actions/workflows/status.yml)
+
 A declarative data retrieval and aggregation gateway for HTTP APIs. Write SQL-like queries to fetch and combine data from multiple REST endpoints.
 
 ## What it does
