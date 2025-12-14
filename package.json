@@ -27,6 +27,7 @@
         "test:integration": "npm test --workspace=modules/engine -- test/tables-routes-integration.test.js",
         "test:tables-routes": "node bin/test-tables-routes.js",
         "test:all": "bin/test-all.sh",
+        "test:performance": "node test-performance.js",
         "clean": "rm -rf node_modules modules/*/node_modules"
     },
     "devDependencies": {

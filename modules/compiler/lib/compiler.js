@@ -20,31 +20,174 @@ const ql = require('./peg/ql.js');
 const assert = require('assert');
 const strParser = require('ql.io-str-template');
 const _ = require('underscore');
+const CacheManager = require('./cache-manager.js');
+const ParserProfiler = require('./parser-profiler.js');
+const { MemoryOptimizer, NodeFactory } = require('./memory-optimizer.js');
+const QueryPlanCache = require('./query-plan-cache.js');
+const IncrementalCompiler = require('./incremental-compiler.js');
 
 exports.version = require('../package.json').version;
 
-const cache = {};
+// Initialize cache manager, profiler, memory optimizer, and advanced optimizations with default settings
+const cacheManager = new CacheManager({ maxSize: 1000 });
+const parserProfiler = new ParserProfiler();
+const memoryOptimizer = new MemoryOptimizer();
+const queryPlanCache = new QueryPlanCache({ maxSize: 500, enabled: false }); // Disabled by default
+const incrementalCompiler = new IncrementalCompiler({ maxFragments: 1000, enabled: false }); // Disabled by default
+const tableCache = {}; // Separate cache for table definitions
+
+// Fast path patterns for common queries
+const FAST_PATTERNS = {
+    simpleSelect: /^\s*select\s+\*\s+from\s+(\w+)\s*$/i,
+    simpleReturn: /^\s*return\s+"([^"]+)"\s*$/i,
+    simpleAssignment: /^\s*(\w+)\s*=\s*select\s+\*\s+from\s+(\w+)\s*$/i
+};
+
 exports.compile = function(script, loaded) {
     assert.ok(script, 'script is undefined');
 
     let compiled, cooked, cacheKey;
 
     cacheKey = script;
-    cooked = cache[cacheKey];
-    cache['_tables'] = loaded
-    // Temporarily disable cache for debugging
-    // if(cooked) {
-    //     return cooked;
-    // }
+    cooked = cacheManager.get(cacheKey);
+    tableCache['_tables'] = loaded;
+    
+    if(cooked) {
+        return cooked;
+    }
 
-    compiled = ql.parse(script);
-    cooked = plan(compiled);
+    // Try query plan cache for advanced optimization (if enabled)
+    if (queryPlanCache.enabled) {
+        const parameters = extractParameters(script);
+        const cachedPlan = queryPlanCache.getPlan(script, parameters);
+        if (cachedPlan) {
+            cacheManager.set(cacheKey, cachedPlan);
+            return cachedPlan;
+        }
+    }
+
+    // Try incremental compilation (if enabled)
+    if (incrementalCompiler.enabled) {
+        const incrementalResult = incrementalCompiler.compile(script, (query) => {
+            return compileNormally(query);
+        });
+        cooked = incrementalResult;
+    } else {
+        cooked = compileNormally(script);
+    }
+    
+    // Apply memory optimization
+    cooked = memoryOptimizer.optimize(cooked);
+    
+    // Cache the plan for future reuse (if enabled)
+    if (queryPlanCache.enabled) {
+        const parameters = extractParameters(script);
+        queryPlanCache.setPlan(script, cooked, parameters);
+    }
+    
     if(Object.seal) {
         cooked = Object.freeze(cooked);
     }
-    cache[cacheKey] = cooked;
+    cacheManager.set(cacheKey, cooked);
 
     return cooked;
+}
+
+// Export cache management functions
+exports.getCacheMetrics = function() {
+    return cacheManager.getMetrics();
+}
+
+exports.clearCache = function() {
+    cacheManager.clear();
+}
+
+exports.configureCaching = function(options) {
+    cacheManager.configure(options);
+}
+
+// Export profiler functions
+exports.enableProfiling = function(options) {
+    parserProfiler.enable(options);
+}
+
+exports.disableProfiling = function() {
+    parserProfiler.disable();
+}
+
+exports.getProfilingResults = function() {
+    return parserProfiler.getResults();
+}
+
+exports.generateProfilingReport = function() {
+    return parserProfiler.generateReport();
+}
+
+exports.resetProfiling = function() {
+    parserProfiler.reset();
+}
+
+// Export memory optimization functions
+exports.enableMemoryOptimization = function() {
+    memoryOptimizer.enable();
+}
+
+exports.disableMemoryOptimization = function() {
+    memoryOptimizer.disable();
+}
+
+exports.getMemoryMetrics = function() {
+    return memoryOptimizer.getMetrics();
+}
+
+exports.resetMemoryMetrics = function() {
+    memoryOptimizer.resetMetrics();
+}
+
+exports.clearMemoryPools = function() {
+    memoryOptimizer.clear();
+}
+
+// Export query plan cache functions
+exports.enableQueryPlanCache = function() {
+    queryPlanCache.enable();
+}
+
+exports.disableQueryPlanCache = function() {
+    queryPlanCache.disable();
+}
+
+exports.getQueryPlanMetrics = function() {
+    return queryPlanCache.getMetrics();
+}
+
+exports.clearQueryPlanCache = function() {
+    queryPlanCache.clear();
+}
+
+exports.configureQueryPlanCache = function(options) {
+    queryPlanCache.configure(options);
+}
+
+// Export incremental compiler functions
+exports.enableIncrementalCompilation = function() {
+    incrementalCompiler.enable();
+}
+
+exports.disableIncrementalCompilation = function() {
+    incrementalCompiler.disable();
+}
+
+exports.getIncrementalMetrics = function() {
+    return incrementalCompiler.getMetrics();
+}
+
+exports.clearIncrementalCache = function() {
+    incrementalCompiler.clear();
+}
+
+exports.configureIncrementalCompiler = function(options) {
+    incrementalCompiler.configure(options);
 }
 
 // Convert the compiled statements into an execution plan.
@@ -70,7 +213,7 @@ function plan(compiled) {
             }
             if(line.assign) {
                 if(symbols[line.assign]) {
-                    throw new ql.SyntaxError('Duplicate symbol ' + line.assign);
+                    throw new Error('Duplicate symbol ' + line.assign);
                 }
                 else {
                     symbols[line.assign] = line;
@@ -113,7 +256,7 @@ function plan(compiled) {
 
         if(line.assign) {
             if(symbols[line.assign]) {
-                throw new ql.SyntaxError('Duplicate symbol ' + line.assign);
+                throw new Error('Duplicate symbol ' + line.assign);
             }
             else {
                 symbols[line.assign] = line;
@@ -456,7 +599,7 @@ function introspectFrom(line, froms, symbols, parent) {
         dependency = symbols[refname];
         if(dependency) {
             if(line.assign === refname) {
-                throw new ql.SyntaxError('Circular reference ' + line.assign);
+                throw new Error('Circular reference ' + line.assign);
             }
             else {
                 if(parent) {
@@ -472,8 +615,8 @@ function introspectFrom(line, froms, symbols, parent) {
 
             }
         }else{
-            if(cache['_tables'] && cache['_tables'][from.name] && cache['_tables'][from.name].verbs && cache['_tables'][from.name].verbs[line.type] && cache['_tables'][from.name].verbs[line.type].expects){
-                line.expects = cache['_tables'][from.name].verbs[line.type].expects;
+            if(tableCache['_tables'] && tableCache['_tables'][from.name] && tableCache['_tables'][from.name].verbs && tableCache['_tables'][from.name].verbs[line.type] && tableCache['_tables'][from.name].verbs[line.type].expects){
+                line.expects = tableCache['_tables'][from.name].verbs[line.type].expects;
             }
         }
     }
@@ -507,7 +650,7 @@ function introspectWhere(line, symbols, parent) {
                                 }
                                 dependency = symbols[refname];
                                 if(line.assign === refname) {
-                                    throw new ql.SyntaxError('Circular reference ' + line.assign);
+                                    throw new Error('Circular reference ' + line.assign);
                                 }
                                 else if(dependency) {
                                     addDep(line, line.dependsOn, dependency, symbols);
@@ -540,7 +683,7 @@ function introspectWhere(line, symbols, parent) {
                         dependency = symbols[refname];
                         if(dependency) {
                             if(line.assign === refname) {
-                                throw new ql.SyntaxError('Circular reference ' + line.assign);
+                                throw new Error('Circular reference ' + line.assign);
                             }
                             else {
                                 addDep(parent || line, (parent || line).dependsOn, dependency, symbols);
@@ -557,14 +700,14 @@ function introspectWhere(line, symbols, parent) {
                     dependency = symbols[refname];
                     if(dependency) {
                         if(line.assign === refname) {
-                            throw new ql.SyntaxError('Circular reference ' + line.assign);
+                            throw new Error('Circular reference ' + line.assign);
                         }
                         else {
                             addDep(line, line.dependsOn, dependency, symbols);
                         }
                     }
                     else {
-                        throw new ql.SyntaxError('UDF ' + where.name + ' not resolved')
+                        throw new Error('UDF ' + where.name + ' not resolved')
                     }
                     break;
             }
@@ -589,4 +732,154 @@ function logicVars(condition, symbols){
     return _.reduce(condition.values, function(memo, val){
         return memo.concat(logicVars(val, symbols));
     }, [])
+}
+
+/**
+ * Fast path optimization for common query patterns
+ * Bypasses full PEG parsing for simple, well-known patterns
+ */
+function tryFastPath(script) {
+    const trimmed = script.trim();
+    
+    // Fast path for simple SELECT * FROM table
+    let match = FAST_PATTERNS.simpleSelect.exec(trimmed);
+    if (match) {
+        const tableName = match[1];
+        return createFastSelectPlan(tableName);
+    }
+    
+    // Fast path for simple RETURN "string"
+    match = FAST_PATTERNS.simpleReturn.exec(trimmed);
+    if (match) {
+        const returnValue = match[1];
+        return createFastReturnPlan(returnValue);
+    }
+    
+    // Fast path for simple assignment: var = SELECT * FROM table
+    match = FAST_PATTERNS.simpleAssignment.exec(trimmed);
+    if (match) {
+        const varName = match[1];
+        const tableName = match[2];
+        return createFastAssignmentPlan(varName, tableName);
+    }
+    
+    return null; // No fast path available
+}
+
+/**
+ * Create optimized plan for simple SELECT * FROM table
+ */
+function createFastSelectPlan(tableName) {
+    const selectNode = NodeFactory.createSelectNode({
+        line: 1,
+        id: 1,
+        fromClause: [{ name: tableName }],
+        columns: { name: '*', type: 'column' },
+        dependsOn: [],
+        listeners: []
+    });
+
+    return NodeFactory.createReturnNode({
+        line: 1,
+        id: 2,
+        rhs: selectNode
+    });
+}
+
+/**
+ * Create optimized plan for simple RETURN "string"
+ */
+function createFastReturnPlan(returnValue) {
+    const defineNode = NodeFactory.createDefineNode({
+        line: 1,
+        id: 1,
+        object: returnValue,
+        dependsOn: [],
+        listeners: []
+    });
+
+    return NodeFactory.createReturnNode({
+        line: 1,
+        id: 1,
+        rhs: defineNode
+    });
+}
+
+/**
+ * Create optimized plan for simple assignment
+ */
+function createFastAssignmentPlan(varName, tableName) {
+    const selectNode = NodeFactory.createSelectNode({
+        line: 1,
+        id: 1,
+        assign: varName,
+        fromClause: [{ name: tableName }],
+        dependsOn: [],
+        listeners: []
+    });
+    
+    const defineNode = NodeFactory.createDefineNode({
+        line: 1,
+        id: 2,
+        object: `{${varName}}`,
+        dependsOn: [selectNode],
+        listeners: []
+    });
+    
+    return NodeFactory.createReturnNode({
+        line: 1,
+        id: 2,
+        rhs: defineNode
+    });
+}
+
+/**
+ * Normal compilation process (without advanced optimizations)
+ */
+function compileNormally(query) {
+    // Try fast path optimization for common patterns
+    const fastResult = tryFastPath(query);
+    if (fastResult) {
+        // Record fast path usage if profiling enabled
+        if (parserProfiler.isEnabled) {
+            parserProfiler.recordFastPath(query);
+        }
+        return fastResult;
+    }
+
+    // Use profiler if enabled
+    let compiled;
+    if (parserProfiler.isEnabled) {
+        compiled = parserProfiler.profileQuery(query);
+    } else {
+        compiled = ql.parse(query);
+    }
+    
+    return plan(compiled);
+}
+
+/**
+ * Extract parameters from query for plan caching
+ */
+function extractParameters(query) {
+    const parameters = {};
+    
+    // Extract string literals
+    const stringMatches = query.match(/"([^"]*)"/g);
+    if (stringMatches) {
+        stringMatches.forEach((match, index) => {
+            const value = match.slice(1, -1); // Remove quotes
+            parameters[`string_${index}`] = value;
+        });
+    }
+    
+    // Extract numeric literals
+    const numberMatches = query.match(/\b\d+(\.\d+)?\b/g);
+    if (numberMatches) {
+        numberMatches.forEach((match, index) => {
+            parameters[`number_${index}`] = match;
+        });
+    }
+    
+    return parameters;
 }

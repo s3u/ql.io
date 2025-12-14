@@ -1,6 +1,11 @@
-[![ql.io](http://ql.io/images/ql.io-large.png)](http://ql.io)
 
 ql.io is a declarative, data-retrieval and aggregation gateway for quickly consuming HTTP APIs. 
+
+A note:
+
+This reposiory is a fork of the official repository `https://github.com/ql-io/ql.io`. I, along with a small group of colleagues, wrote ql.io during 2011 and 2012. While it because mildly popular, the project failed to gain adoption, and so, we decided to abandon it in 2012. Since then the code rotted due to broken dependencies, outdated patterns, vulnerabilities, etc.
+
+During December 2025, I decided to modernize it with the help [Kiro](http://kiro.dev), and this fork is the result of that modernization. The project is now functional, and most functionality works. I am still reviewing the code changes, and modernizing it further.
 
 ## Requirements
 
@@ -12,7 +17,7 @@ ql.io is a declarative, data-retrieval and aggregation gateway for quickly consu
 ### 1. Clone and Build
 
 ```bash
-git clone https://github.com/ql-io/ql.io.git
+git clone https://github.com/s3u/ql.io.git
 cd ql.io
 make install
 ```

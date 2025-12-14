@@ -13,7 +13,14 @@
     "scripts": {
         "test": "jest",
         "test:coverage": "jest --coverage",
-        "test:watch": "jest --watch"
+        "test:watch": "jest --watch",
+        "test:performance": "node test/performance/run-all-benchmarks.js",
+        "test:benchmarks": "node test/performance/benchmarks/engine-benchmark.js",
+        "test:integration": "node test/performance/integration/end-to-end-performance.js",
+        "test:load": "node test/performance/load/stress-test.js",
+        "performance:report": "node test/performance/utils/report-generator.js",
+        "performance:compare": "node test/performance/utils/baseline-manager.js compare",
+        "performance:baseline": "node test/performance/utils/baseline-manager.js save"
     },
     "dependencies": {
         "async": "^3.2.6",
@@ -41,6 +48,8 @@
         "ws": "^8.18.3"
     },
     "devDependencies": {
+        "autocannon": "^7.15.0",
+        "benchmark": "^2.1.4",
         "jest": "^29.0.0"
     }
 }

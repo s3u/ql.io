@@ -1,0 +1,43 @@
+{
+  "timestamp": "2025-12-14T05:17:34.976Z",
+  "nodeVersion": "v23.11.0",
+  "compilation": {
+    "simple": {
+      "hz": 96837324.03124924,
+      "rme": 5.670588642634197,
+      "samples": 75
+    },
+    "withWhere": {
+      "hz": 59705629.96942548,
+      "rme": 2.2875029357440306,
+      "samples": 85
+    },
+    "basicReturn": {
+      "hz": 55361741.220888145,
+      "rme": 2.9295719434320104,
+      "samples": 84
+    },
+    "simpleAssignment": {
+      "hz": 44841359.15888318,
+      "rme": 6.45282791143653,
+      "samples": 67
+    }
+  },
+  "memory": {
+    "heapUsedDelta": 7944856,
+    "heapTotalDelta": 409600,
+    "externalDelta": 40
+  },
+  "caching": {
+    "First compilation (cache miss)": {
+      "hz": 3948029.0718598226,
+      "rme": 2.9954287745482953,
+      "samples": 81
+    },
+    "Cached compilation (cache hit)": {
+      "hz": 42428178.33785541,
+      "rme": 2.1371847443059506,
+      "samples": 84
+    }
+  }
+}
