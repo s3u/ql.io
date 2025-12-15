@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ql.io Web Console S3 Static Website
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Deployment environment
+
+Resources:
+  # S3 Console Bucket
+  ConsoleBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'qlio-console-${AWS::AccountId}-${Environment}'
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  # Console Bucket Policy
+  ConsoleBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ConsoleBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub 'arn:aws:s3:::${ConsoleBucket}/*'
+
+Outputs:
+  ConsoleBucketName:
+    Description: S3 Console Bucket Name
+    Value: !Ref ConsoleBucket
+    Export:
+      Name: !Sub 'qlio-console-bucket-${Environment}'
+
+  ConsoleWebsiteUrl:
+    Description: Console Website URL
+    Value: !GetAtt ConsoleBucket.WebsiteURL
+    Export:
+      Name: !Sub 'qlio-console-url-${Environment}'

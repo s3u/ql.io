@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ql.io S3 Configuration Bucket
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Deployment environment
+
+Resources:
+  # S3 Config Bucket
+  ConfigBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'qlio-config-${AWS::AccountId}-${Environment}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+Outputs:
+  ConfigBucketName:
+    Description: S3 Config Bucket Name
+    Value: !Ref ConfigBucket
+    Export:
+      Name: !Sub 'qlio-config-bucket-${Environment}'
+
+  ConfigBucketArn:
+    Description: S3 Config Bucket ARN
+    Value: !GetAtt ConfigBucket.Arn
+    Export:
+      Name: !Sub 'qlio-config-bucket-arn-${Environment}'

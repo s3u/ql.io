@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ql.io API Gateway Keys and Usage Plan
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Deployment environment
+  
+  ApiGatewayId:
+    Type: String
+    Description: API Gateway ID to attach usage plan to
+
+Resources:
+  # API Key
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Name: !Sub 'qlio-api-key-${Environment}'
+      Description: API Key for ql.io serverless deployment
+      Enabled: true
+
+  # Usage Plan
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: !Sub 'qlio-usage-plan-${Environment}'
+      Description: Usage plan for ql.io API
+      Throttle:
+        RateLimit: 1000
+        BurstLimit: 2000
+      Quota:
+        Limit: 100000
+        Period: MONTH
+      ApiStages:
+        - ApiId: !Ref ApiGatewayId
+          Stage: Prod
+
+  # Usage Plan Key
+  UsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref UsagePlan
+
+Outputs:
+  ApiKeyId:
+    Description: API Key ID
+    Value: !Ref ApiKey
+    Export:
+      Name: !Sub 'qlio-api-key-id-${Environment}'
+
+  UsagePlanId:
+    Description: Usage Plan ID
+    Value: !Ref UsagePlan
+    Export:
+      Name: !Sub 'qlio-usage-plan-id-${Environment}'

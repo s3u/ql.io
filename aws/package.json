@@ -1,0 +1,26 @@
+{
+  "name": "qlio-aws-serverless",
+  "version": "1.0.0",
+  "description": "ql.io AWS Serverless deployment configuration",
+  "scripts": {
+    "build": "sam build",
+    "deploy:dev": "sam deploy --config-env dev",
+    "deploy:staging": "sam deploy --config-env staging", 
+    "deploy:prod": "sam deploy --config-env prod",
+    "local:start": "sam local start-api",
+    "local:invoke": "sam local invoke",
+    "test": "cd lambda && npm test",
+    "lint": "cd lambda && npm run lint",
+    "clean": "rm -rf .aws-sam",
+    "logs": "sam logs --stack-name qlio-serverless-dev --tail",
+    "validate": "sam validate",
+    "sync:dev": "sam sync --stack-name qlio-serverless-dev --watch"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.450.0",
+    "@aws-sdk/client-dynamodb": "^3.450.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ql.io Console</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-radius: 8px 8px 0 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 0;
+        }
+
+        .nav-tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tab:hover {
+            background-color: #f8f9fa;
+        }
+
+        .nav-tab.active {
+            border-bottom-color: #3498db;
+            background-color: #fff;
+        }
+
+        .tab-content {
+            background: white;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 2rem;
+            min-height: 500px;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+
+        .result-container {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+
+        .result-container pre {
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .error {
+            border-left-color: #e74c3c;
+            background-color: #fdf2f2;
+            color: #c0392b;
+        }
+
+        .success {
+            border-left-color: #27ae60;
+            background-color: #f0f9f4;
+            color: #196f3d;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .table-list {
+            list-style: none;
+        }
+
+        .table-item {
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            background: #f9f9f9;
+        }
+
+        .table-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .table-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .config-section {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .config-section h3 {
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ql.io Serverless Console</h1>
+    </div>
+
+    <div class="container">
+        <div class="nav-tabs">
+            <div class="nav-tab active" data-tab="query">Query</div>
+            <div class="nav-tab" data-tab="tables">Tables</div>
+            <div class="nav-tab" data-tab="settings">Settings</div>
+        </div>
+
+        <div class="tab-content">
+            <!-- Query Tab -->
+            <div class="tab-pane active" id="query-tab">
+                <h2>Execute Query</h2>
+                <form id="query-form">
+                    <div class="form-group">
+                        <label class="form-label" for="query-input">ql.io Query:</label>
+                        <textarea 
+                            id="query-input" 
+                            class="form-control" 
+                            placeholder="Enter your ql.io query here..."
+                            rows="6">select * from github.repos where q='ql.io'</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Execute Query</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearQuery()">Clear</button>
+                </form>
+
+                <div class="loading" id="query-loading">
+                    <div class="spinner"></div>
+                    Executing query...
+                </div>
+
+                <div id="query-result" class="result-container" style="display: none;">
+                    <pre id="query-output"></pre>
+                </div>
+            </div>
+
+            <!-- Tables Tab -->
+            <div class="tab-pane" id="tables-tab">
+                <h2>Available Tables</h2>
+                <button class="btn btn-primary" onclick="loadTables()">Refresh Tables</button>
+
+                <div class="loading" id="tables-loading">
+                    <div class="spinner"></div>
+                    Loading tables...
+                </div>
+
+                <ul id="tables-list" class="table-list"></ul>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-pane" id="settings-tab">
+                <h2>Configuration</h2>
+                
+                <div class="config-section">
+                    <h3>API Configuration</h3>
+                    <div class="form-group">
+                        <label class="form-label" for="api-url">API URL:</label>
+                        <input type="url" id="api-url" class="form-control" placeholder="https://your-api-gateway-url.com/Prod">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="api-key">API Key:</label>
+                        <input type="password" id="api-key" class="form-control" placeholder="Your API Gateway key">
+                    </div>
+                    <button class="btn btn-primary" onclick="saveConfig()">Save Configuration</button>
+                </div>
+
+                <div class="config-section">
+                    <h3>Connection Status</h3>
+                    <button class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+                    <div id="connection-status" class="result-container" style="display: none;">
+                        <pre id="connection-output"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        let config = {
+            apiUrl: '',
+            apiKey: ''
+        };
+
+        // Load configuration from localStorage
+        function loadConfig() {
+            const saved = localStorage.getItem('qlio-config');
+            if (saved) {
+                config = JSON.parse(saved);
+                document.getElementById('api-url').value = config.apiUrl || '';
+                document.getElementById('api-key').value = config.apiKey || '';
+            }
+        }
+
+        // Save configuration to localStorage
+        function saveConfig() {
+            config.apiUrl = document.getElementById('api-url').value;
+            config.apiKey = document.getElementById('api-key').value;
+            localStorage.setItem('qlio-config', JSON.stringify(config));
+            showResult('connection-status', 'Configuration saved successfully!', 'success');
+        }
+
+        // Tab switching
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabName = this.dataset.tab;
+                
+                // Update active tab
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update active pane
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                document.getElementById(tabName + '-tab').classList.add('active');
+            });
+        });
+
+        // Query form submission
+        document.getElementById('query-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const query = document.getElementById('query-input').value.trim();
+            if (!query) {
+                showResult('query-result', 'Please enter a query', 'error');
+                return;
+            }
+
+            if (!config.apiUrl || !config.apiKey) {
+                showResult('query-result', 'Please configure API URL and key in Settings', 'error');
+                return;
+            }
+
+            showLoading('query-loading', true);
+            hideResult('query-result');
+
+            try {
+                const response = await fetch(`${config.apiUrl}/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': config.apiKey
+                    },
+                    body: JSON.stringify({ query })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('query-result', JSON.stringify(result, null, 2), 'success');
+                } else {
+                    showResult('query-result', `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                showResult('query-result', `Network error: ${error.message}`, 'error');
+            } finally {
+                showLoading('query-loading', false);
+            }
+        });
+
+        // Load tables
+        async function loadTables() {
+            if (!config.apiUrl || !config.apiKey) {
+                showResult('tables-list', 'Please configure API URL and key in Settings', 'error');
+                return;
+            }
+
+            showLoading('tables-loading', true);
+            document.getElementById('tables-list').innerHTML = '';
+
+            try {
+                const response = await fetch(`${config.apiUrl}/tables`, {
+                    headers: {
+                        'X-API-Key': config.apiKey
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (response.ok && result.tables) {
+                    displayTables(result.tables);
+                } else {
+                    document.getElementById('tables-list').innerHTML = 
+                        `<li class="table-item error">Error: ${result.error || 'Failed to load tables'}</li>`;
+                }
+            } catch (error) {
+                document.getElementById('tables-list').innerHTML = 
+                    `<li class="table-item error">Network error: ${error.message}</li>`;
+            } finally {
+                showLoading('tables-loading', false);
+            }
+        }
+
+        // Display tables
+        function displayTables(tables) {
+            const list = document.getElementById('tables-list');
+            
+            if (tables.length === 0) {
+                list.innerHTML = '<li class="table-item">No tables available</li>';
+                return;
+            }
+
+            list.innerHTML = tables.map(table => `
+                <li class="table-item">
+                    <div class="table-name">${table.name}</div>
+                    <div class="table-description">${table.description || 'No description'}</div>
+                </li>
+            `).join('');
+        }
+
+        // Test connection
+        async function testConnection() {
+            if (!config.apiUrl || !config.apiKey) {
+                showResult('connection-status', 'Please configure API URL and key first', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${config.apiUrl}/tables`, {
+                    headers: {
+                        'X-API-Key': config.apiKey
+                    }
+                });
+
+                if (response.ok) {
+                    showResult('connection-status', 'Connection successful!', 'success');
+                } else {
+                    showResult('connection-status', `Connection failed: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                showResult('connection-status', `Connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Utility functions
+        function showResult(containerId, message, type = '') {
+            const container = document.getElementById(containerId);
+            const output = container.querySelector('pre') || container;
+            
+            container.className = `result-container ${type}`;
+            output.textContent = message;
+            container.style.display = 'block';
+        }
+
+        function hideResult(containerId) {
+            document.getElementById(containerId).style.display = 'none';
+        }
+
+        function showLoading(loadingId, show) {
+            document.getElementById(loadingId).style.display = show ? 'block' : 'none';
+        }
+
+        function clearQuery() {
+            document.getElementById('query-input').value = '';
+            hideResult('query-result');
+        }
+
+        // Initialize
+        loadConfig();
+    </script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ql.io DynamoDB Cache Table Only
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Deployment environment
+
+Resources:
+  # DynamoDB Cache Table
+  CacheTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'qlio-cache-${Environment}'
+      AttributeDefinitions:
+        - AttributeName: queryHash
+          AttributeType: S
+      KeySchema:
+        - AttributeName: queryHash
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+Outputs:
+  CacheTableName:
+    Description: DynamoDB Cache Table Name
+    Value: !Ref CacheTable
+    Export:
+      Name: !Sub 'qlio-cache-table-${Environment}'
+
+  CacheTableArn:
+    Description: DynamoDB Cache Table ARN
+    Value: !GetAtt CacheTable.Arn
+    Export:
+      Name: !Sub 'qlio-cache-table-arn-${Environment}'

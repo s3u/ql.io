@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: ql.io Serverless Deployment - Minimal Version
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Deployment environment
+
+Globals:
+  Function:
+    Runtime: nodejs18.x
+    Timeout: 30
+    MemorySize: 512
+    Environment:
+      Variables:
+        NODE_ENV: !Ref Environment
+
+Resources:
+  # Lambda Function
+  QLIOFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'qlio-${Environment}'
+      CodeUri: lambda/
+      Handler: index.handler
+      Environment:
+        Variables:
+          CACHE_TABLE: !Sub 'qlio-cache-${Environment}'
+          CONFIG_BUCKET: !Sub 'qlio-config-${AWS::AccountId}-${Environment}'
+          ENVIRONMENT: !Ref Environment
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/qlio-cache-${Environment}'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:ListBucket
+                - s3:GetBucketLocation
+                - s3:GetObjectVersion
+              Resource: 
+                - !Sub 'arn:aws:s3:::qlio-config-${AWS::AccountId}-${Environment}'
+                - !Sub 'arn:aws:s3:::qlio-config-${AWS::AccountId}-${Environment}/*'
+      Events:
+        QueryApi:
+          Type: Api
+          Properties:
+            Path: /query
+            Method: post
+            Auth:
+              ApiKeyRequired: true
+        TablesApi:
+          Type: Api
+          Properties:
+            Path: /tables
+            Method: get
+            Auth:
+              ApiKeyRequired: true
+        ProxyApi:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: any
+            Auth:
+              ApiKeyRequired: true
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiUrl'
+
+  FunctionName:
+    Description: Lambda Function Name
+    Value: !Ref QLIOFunction
+    Export:
+      Name: !Sub '${AWS::StackName}-FunctionName'

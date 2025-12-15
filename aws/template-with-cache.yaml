@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: ql.io Serverless Deployment - With DynamoDB Cache
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Deployment environment
+
+Globals:
+  Function:
+    Runtime: nodejs18.x
+    Timeout: 30
+    MemorySize: 512
+    Environment:
+      Variables:
+        NODE_ENV: !Ref Environment
+
+Resources:
+  # DynamoDB Cache Table
+  CacheTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'qlio-cache-${Environment}'
+      AttributeDefinitions:
+        - AttributeName: queryHash
+          AttributeType: S
+      KeySchema:
+        - AttributeName: queryHash
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # Lambda Function
+  QLIOFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'qlio-${Environment}'
+      CodeUri: lambda/
+      Handler: index.handler
+      Environment:
+        Variables:
+          CACHE_TABLE: !Ref CacheTable
+          ENVIRONMENT: !Ref Environment
+      Events:
+        QueryApi:
+          Type: Api
+          Properties:
+            Path: /query
+            Method: post
+        TablesApi:
+          Type: Api
+          Properties:
+            Path: /tables
+            Method: get
+        ProxyApi:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: any
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource: !GetAtt CacheTable.Arn
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiUrl'
+
+  FunctionName:
+    Description: Lambda Function Name
+    Value: !Ref QLIOFunction
+    Export:
+      Name: !Sub '${AWS::StackName}-FunctionName'
+
+  CacheTableName:
+    Description: DynamoDB Cache Table Name
+    Value: !Ref CacheTable
+    Export:
+      Name: !Sub '${AWS::StackName}-CacheTable'
