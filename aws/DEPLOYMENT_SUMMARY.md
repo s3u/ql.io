@@ -19,12 +19,12 @@
 - TTL: Enabled (1 hour)
 - Purpose: Query result caching
 
-✅ **S3 Config Bucket**: `qlio-config-218846826781-dev`
+✅ **S3 Config Bucket**: `qlio-config-[account-id]-dev`
 - Purpose: Table and route definitions
 - Versioning: Enabled
 - Sample tables: GitHub, JSONPlaceholder
 
-✅ **S3 Console Bucket**: `qlio-console-218846826781-dev`
+✅ **S3 Console Bucket**: `qlio-console-[account-id]-dev`
 - Purpose: Web console hosting
 - Website hosting: Enabled
 - Public access: Configured
@@ -37,11 +37,11 @@
 ## 🔗 Access Information
 
 ### API Endpoints
-- **Base URL**: `https://u9ooyyo6a0.execute-api.us-west-2.amazonaws.com/Prod`
-- **API Key**: `5zAIQSNLpj6G2YsNQk4kw7LbyREyykU16o98ianQ`
+- **Base URL**: `https://[api-gateway-id].execute-api.us-west-2.amazonaws.com/Prod`
+- **API Key**: `[your-generated-api-key]`
 
 ### Web Console
-- **URL**: `http://qlio-console-218846826781-dev.s3-website-us-west-2.amazonaws.com`
+- **URL**: `http://qlio-console-[account-id]-dev.s3-website-us-west-2.amazonaws.com`
 
 ## 📋 CloudFormation Stacks
 
@@ -59,29 +59,29 @@
 
 ```bash
 # Test tables endpoint
-curl -X GET https://u9ooyyo6a0.execute-api.us-west-2.amazonaws.com/Prod/tables \
-  -H "X-API-Key: 5zAIQSNLpj6G2YsNQk4kw7LbyREyykU16o98ianQ"
+curl -X GET https://[api-gateway-id].execute-api.us-west-2.amazonaws.com/Prod/tables \
+  -H "X-API-Key: [your-api-key]"
 
 # Test query endpoint
-curl -X POST https://u9ooyyo6a0.execute-api.us-west-2.amazonaws.com/Prod/query \
-  -H "X-API-Key: 5zAIQSNLpj6G2YsNQk4kw7LbyREyykU16o98ianQ" \
+curl -X POST https://[api-gateway-id].execute-api.us-west-2.amazonaws.com/Prod/query \
+  -H "X-API-Key: [your-api-key]" \
   -H "Content-Type: application/json" \
   -d '{"query": "select * from github.repos where q='\''test'\''"}'
 
 # Test caching (run same query twice)
-curl -X POST https://u9ooyyo6a0.execute-api.us-west-2.amazonaws.com/Prod/query \
-  -H "X-API-Key: 5zAIQSNLpj6G2YsNQk4kw7LbyREyykU16o98ianQ" \
+curl -X POST https://[api-gateway-id].execute-api.us-west-2.amazonaws.com/Prod/query \
+  -H "X-API-Key: [your-api-key]" \
   -H "Content-Type: application/json" \
   -d '{"query": "select * from github.repos where q='\''test'\''"}'
 ```
 
 ### Test Web Console
 
-1. Open: `http://qlio-console-218846826781-dev.s3-website-us-west-2.amazonaws.com`
+1. Open: `http://qlio-console-[account-id]-dev.s3-website-us-west-2.amazonaws.com`
 2. Go to Settings tab
 3. Configure:
-   - API URL: `https://u9ooyyo6a0.execute-api.us-west-2.amazonaws.com/Prod`
-   - API Key: `5zAIQSNLpj6G2YsNQk4kw7LbyREyykU16o98ianQ`
+   - API URL: `https://[api-gateway-id].execute-api.us-west-2.amazonaws.com/Prod`
+   - API Key: `[your-api-key]`
 4. Test connection
 5. Execute queries in Query tab
 
@@ -116,12 +116,12 @@ sam deploy --template .aws-sam/build/template.yaml --stack-name qlio-minimal-dev
 
 ### Update Console
 ```bash
-aws s3 cp console/ s3://qlio-console-218846826781-dev/ --recursive
+aws s3 cp console/ s3://qlio-console-[account-id]-dev/ --recursive
 ```
 
 ### Update Table Definitions
 ```bash
-aws s3 cp sample-tables/ s3://qlio-config-218846826781-dev/tables/ --recursive
+aws s3 cp sample-tables/ s3://qlio-config-[account-id]-dev/tables/ --recursive
 ```
 
 ## 🚀 Next Steps
