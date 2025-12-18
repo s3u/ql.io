@@ -165,32 +165,29 @@ API_KEY_ID=$(aws cloudformation describe-stacks \
   --query 'Stacks[0].Outputs[?OutputKey==`ApiKeyId`].OutputValue' \
   --output text)
 
-API_KEY_VALUE=$(aws apigateway get-api-key \
-  --api-key "${API_KEY_ID}" \
-  --include-value \
-  --region "${REGION}" \
-  --query 'value' \
-  --output text)
-
 echo ""
 echo -e "${GREEN}🎉 Deployment Complete!${NC}"
 echo -e "${GREEN}======================${NC}"
 echo ""
 echo -e "${BLUE}📡 API Information:${NC}"
 echo -e "  URL: ${YELLOW}${API_URL}${NC}"
-echo -e "  Key: ${YELLOW}${API_KEY_VALUE}${NC}"
+echo -e "  Key ID: ${YELLOW}${API_KEY_ID}${NC}"
+echo -e "  ${RED}⚠️  API Key value not displayed for security${NC}"
 echo ""
 echo -e "${BLUE}🌐 Console Information:${NC}"
 echo -e "  URL: ${YELLOW}${CONSOLE_URL}${NC}"
 echo ""
-echo -e "${BLUE}🧪 Test Commands:${NC}"
+echo -e "${BLUE}🔑 Get API Key:${NC}"
+echo -e "${YELLOW}aws apigateway get-api-key --api-key ${API_KEY_ID} --include-value --region ${REGION} --query 'value' --output text${NC}"
+echo ""
+echo -e "${BLUE}🧪 Test Commands (replace YOUR_API_KEY):${NC}"
 echo -e "${YELLOW}# Test tables endpoint${NC}"
 echo -e "curl -X GET ${API_URL}/tables \\"
-echo -e "  -H \"X-API-Key: ${API_KEY_VALUE}\""
+echo -e "  -H \"X-API-Key: YOUR_API_KEY\""
 echo ""
 echo -e "${YELLOW}# Test query endpoint${NC}"
 echo -e "curl -X POST ${API_URL}/query \\"
-echo -e "  -H \"X-API-Key: ${API_KEY_VALUE}\" \\"
+echo -e "  -H \"X-API-Key: YOUR_API_KEY\" \\"
 echo -e "  -H \"Content-Type: application/json\" \\"
 echo -e "  -d '{\"query\": \"select * from github.repos where q='\\''test'\\''\")}'"
 echo ""
@@ -198,11 +195,11 @@ echo -e "${BLUE}📋 Console Setup:${NC}"
 echo -e "1. Open: ${YELLOW}${CONSOLE_URL}${NC}"
 echo -e "2. Go to Settings tab"
 echo -e "3. Configure API URL: ${YELLOW}${API_URL}${NC}"
-echo -e "4. Configure API Key: ${YELLOW}${API_KEY_VALUE}${NC}"
+echo -e "4. Get API Key using command above and configure it"
 echo -e "5. Test connection and start querying!"
 echo ""
 
-# Save deployment info to file
+# Save deployment info to file (without API key for security)
 cat > deployment-info.json << EOF
 {
   "environment": "${ENVIRONMENT}",
@@ -211,10 +208,11 @@ cat > deployment-info.json << EOF
   "accountId": "${ACCOUNT_ID}",
   "apiUrl": "${API_URL}",
   "consoleUrl": "${CONSOLE_URL}",
-  "apiKey": "${API_KEY_VALUE}",
+  "apiKeyId": "${API_KEY_ID}",
   "configBucket": "${CONFIG_BUCKET}",
   "consoleBucket": "${CONSOLE_BUCKET}",
-  "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "note": "API key value available via: aws apigateway get-api-key --api-key ${API_KEY_ID} --include-value"
 }
 EOF
 

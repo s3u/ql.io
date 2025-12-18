@@ -68,8 +68,11 @@ After deployment, note the outputs:
 ### 5. Retrieve API Key
 
 ```bash
-aws apigateway get-api-key --api-key <ApiKeyId> --include-value
+# Get API Key ID from deployment output, then retrieve the key value
+aws apigateway get-api-key --api-key <ApiKeyId> --include-value --query 'value' --output text
 ```
+
+**Security Note**: API keys are not displayed in deployment logs for security reasons. Always retrieve them using the AWS CLI with appropriate permissions.
 
 ## Local Development
 

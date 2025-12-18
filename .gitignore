@@ -23,3 +23,8 @@ console-ui/dist/
 coverage/
 */coverage/
 **/coverage/
+
+# AWS deployment artifacts (may contain sensitive data)
+aws/deployment-info.json
+aws/.aws-sam/
+aws/samconfig.toml.bak
