@@ -7,7 +7,7 @@
     },
     "workspaces": [
         "modules/app",
-        "modules/compiler", 
+        "modules/compiler",
         "modules/console",
         "modules/engine",
         "modules/mutable-uri",
@@ -25,20 +25,35 @@
         "test:str-template": "npm test --workspace=modules/str-template",
         "test:uri-template": "npm test --workspace=modules/uri-template",
         "test:integration": "jest --config ./config/jest.integration.config.js",
+        "test:integration:api": "jest --config ./test/integration/jest.api.config.js",
+        "test:integration:browser": "jest --config ./test/browser/jest.browser.config.js",
+        "test:integration:all": "npm run test:integration:api && npm run test:integration:browser",
         "test:demo": "jest --config ./config/jest.integration.config.js",
         "test:demo-watch": "jest --config ./config/jest.integration.config.js --watch",
         "test:tables-routes": "node bin/test-tables-routes.js",
         "test:all": "bin/test-all.sh",
         "test:performance": "node tools/test-performance.js",
+        "hook:test": "node .kiro/hooks/test-hook.js",
+        "hook:review": "node .kiro/hooks/scripts/critical-code-review.js",
+        "hook:enhance-commit": "node .kiro/hooks/scripts/enhance-commit-message.js",
         "clean": "rm -rf node_modules modules/*/node_modules"
     },
     "devDependencies": {
-        "jest": "^29.7.0"
+        "jest": "^29.7.0",
+        "playwright": "^1.40.0",
+        "ws": "^8.18.3"
     },
     "repository": {
         "type": "git",
         "url": "https://github.com/ql-io/ql.io"
     },
     "license": "Apache-2.0",
-    "keywords": ["ql", "query", "data", "aggregation", "gateway", "api"]
+    "keywords": [
+        "ql",
+        "query",
+        "data",
+        "aggregation",
+        "gateway",
+        "api"
+    ]
 }

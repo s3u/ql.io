@@ -60,7 +60,7 @@ app.get('/scripts/compiler.js', function(req, res) {
 
 // Console routes
 app.get('/console', function(req, res) {
-    res.render('console-simple', {
+    res.render('console/index', {
         title: 'ql.io Console',
         script: req.query.s || '-- Type ql script here - all keywords must be in lower case'
     });

@@ -1,0 +1,51 @@
+{
+  "name": "Critical Code Review & Test Hook",
+  "description": "Performs thorough code review, updates commits, and runs end-to-end tests before any git commit",
+  "trigger": {
+    "type": "git-pre-commit",
+    "enabled": true
+  },
+  "actions": [
+    {
+      "type": "agent-message",
+      "message": "🔍 CRITICAL CODE REVIEW INITIATED\n\nI'm about to perform an extremely thorough and critical review of your changes. Prepare for some tough love - I'll be looking for:\n\n• Code quality issues and anti-patterns\n• Performance problems and inefficiencies  \n• Security vulnerabilities\n• Missing error handling\n• Poor naming conventions\n• Lack of documentation\n• Test coverage gaps\n• Architecture violations\n\nLet's see what you've done wrong this time... 😤\n\n---\n\nAnalyzing git diff and staged changes..."
+    },
+    {
+      "type": "shell-command",
+      "command": "node .kiro/hooks/scripts/critical-code-review.js",
+      "description": "Run critical code review analysis"
+    },
+    {
+      "type": "agent-message", 
+      "message": "🧪 RUNNING COMPREHENSIVE TEST SUITE\n\nNow let's see if your code actually works or if you've broken everything...\n\n• Unit tests (all modules)\n• Integration tests (API + Browser)\n• Demo tests\n• Performance benchmarks\n\nThis better not fail or you're going back to the drawing board! 🎯"
+    },
+    {
+      "type": "shell-command",
+      "command": "npm run test:all",
+      "description": "Run all tests including integration tests"
+    },
+    {
+      "type": "shell-command",
+      "command": "npm run test:integration:all",
+      "description": "Run end-to-end integration tests"
+    },
+    {
+      "type": "agent-message",
+      "message": "📝 COMMIT MESSAGE ENHANCEMENT\n\nYour commit message probably sucks. Let me help you write something that actually describes what you did and why it matters.\n\nAnalyzing changes to generate a proper commit message..."
+    },
+    {
+      "type": "shell-command", 
+      "command": "node .kiro/hooks/scripts/enhance-commit-message.js",
+      "description": "Enhance commit message based on code changes"
+    },
+    {
+      "type": "agent-message",
+      "message": "✅ PRE-COMMIT REVIEW COMPLETE\n\nIf you're seeing this message, congratulations - your code somehow passed my brutal review process. The tests are passing and your commit message has been enhanced.\n\nYou may proceed with the commit, but remember: I'm watching your every move! 👁️\n\n---\n\n**Summary:**\n• Code review: PASSED (barely)\n• Tests: ALL PASSING ✅\n• Commit message: ENHANCED 📝\n• Your ego: APPROPRIATELY DEFLATED 😏"
+    }
+  ],
+  "settings": {
+    "timeout": 300000,
+    "failOnError": true,
+    "logLevel": "verbose"
+  }
+}
