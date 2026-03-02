@@ -185,7 +185,7 @@ describe('select obj test Tests', () => {
                 }
             };
             
-            return select a.items[0], a.metadata.count from a;
+            return select a.items[0], a.metadata.count from a as a;
         `;
         
         return new Promise((resolve, reject) => {
