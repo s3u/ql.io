@@ -36,7 +36,7 @@ var maxLoad = os.cpus().length / 2; // 50% load
 
 exports.compress = function (req, res, options) {
 
-    var options = options || {};
+    options = options || {};
 
     // Do not compress if CPU is 50%
     if(os.loadavg()[1] > maxLoad ) {

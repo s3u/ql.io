@@ -18,7 +18,7 @@
 
 var jsonfill = require('./jsonfill.js'),
     _ = require('underscore'),
-    jsonPath = require('jsonpath'),
+    jsonPath = require('./jsonpath-compat'),
     assert = require('assert');
 
 exports.reject = function(resource, statement, context, source) {

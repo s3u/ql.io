@@ -288,6 +288,7 @@
                     <div class="form-group">
                         <label class="form-label" for="api-key">API Key:</label>
                         <input type="password" id="api-key" class="form-control" placeholder="Your API Gateway key">
+                        <small style="color: #666; font-size: 0.8rem;">⚠️ API key is stored in memory only and will be cleared when you refresh the page</small>
                     </div>
                     <button class="btn btn-primary" onclick="saveConfig()">Save Configuration</button>
                 </div>
@@ -304,28 +305,35 @@
     </div>
 
     <script>
-        // Configuration
+        // Configuration (API key stored in memory only for security)
         let config = {
             apiUrl: '',
             apiKey: ''
         };
 
-        // Load configuration from localStorage
+        // Load configuration from localStorage (API URL only)
         function loadConfig() {
             const saved = localStorage.getItem('qlio-config');
             if (saved) {
-                config = JSON.parse(saved);
-                document.getElementById('api-url').value = config.apiUrl || '';
-                document.getElementById('api-key').value = config.apiKey || '';
+                const savedConfig = JSON.parse(saved);
+                config.apiUrl = savedConfig.apiUrl || '';
+                document.getElementById('api-url').value = config.apiUrl;
+                // API key not loaded from storage for security
+                document.getElementById('api-key').value = '';
             }
         }
 
-        // Save configuration to localStorage
+        // Save configuration to localStorage (API URL only, not API key)
         function saveConfig() {
             config.apiUrl = document.getElementById('api-url').value;
             config.apiKey = document.getElementById('api-key').value;
-            localStorage.setItem('qlio-config', JSON.stringify(config));
-            showResult('connection-status', 'Configuration saved successfully!', 'success');
+            
+            // Only save API URL to localStorage for security
+            localStorage.setItem('qlio-config', JSON.stringify({
+                apiUrl: config.apiUrl
+            }));
+            
+            showResult('connection-status', 'Configuration saved! (API key stored in memory only for security)', 'success');
         }
 
         // Tab switching

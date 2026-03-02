@@ -17,7 +17,7 @@
 'use strict';
 
 var _ = require('underscore'),
-    jsonPath = require('jsonpath'),
+    jsonPath = require('./jsonpath-compat'),
     strTemplate = require('ql.io-str-template'),
     assert = require('assert');
 

@@ -1,0 +1,307 @@
+name: AWS Serverless Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      confirm_production:
+        description: 'Type "CONFIRM" to deploy to production'
+        required: false
+        type: string
+
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'aws/**'
+      - '.github/workflows/aws-deploy.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      should-deploy: ${{ steps.validate.outputs.should-deploy }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set environment
+      id: set-env
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+        else
+          echo "environment=dev" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Validate production deployment
+      id: validate
+      run: |
+        ENV="${{ steps.set-env.outputs.environment }}"
+        if [ "$ENV" = "prod" ]; then
+          if [ "${{ github.event.inputs.confirm_production }}" != "CONFIRM" ]; then
+            echo "❌ Production deployment requires confirmation"
+            echo "Please type 'CONFIRM' in the confirm_production field"
+            exit 1
+          fi
+          if [ "${{ github.ref }}" != "refs/heads/main" ] && [ "${{ github.ref }}" != "refs/heads/master" ]; then
+            echo "❌ Production deployments only allowed from main/master branch"
+            exit 1
+          fi
+        fi
+        echo "should-deploy=true" >> $GITHUB_OUTPUT
+        echo "✅ Validation passed for environment: $ENV"
+
+  deploy:
+    needs: validate
+    if: needs.validate.outputs.should-deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ needs.validate.outputs.environment }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Setup Python for AWS SAM
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Setup AWS SAM CLI
+      uses: aws-actions/setup-sam@v2
+      with:
+        use-installer: true
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION || 'us-west-2' }}
+    
+    - name: Install dependencies
+      run: |
+        cd aws
+        npm ci
+        cd lambda
+        npm ci
+    
+    - name: Run tests
+      run: |
+        cd aws
+        npm test
+    
+    - name: Validate SAM template
+      run: |
+        cd aws
+        sam validate --template template.yaml
+    
+    - name: Build SAM application
+      run: |
+        cd aws
+        sam build --template template.yaml
+    
+    - name: Deploy to AWS
+      run: |
+        cd aws
+        sam deploy \
+          --template .aws-sam/build/template.yaml \
+          --stack-name qlio-serverless-${{ needs.validate.outputs.environment }} \
+          --resolve-s3 \
+          --no-confirm-changeset \
+          --capabilities CAPABILITY_IAM \
+          --parameter-overrides Environment=${{ needs.validate.outputs.environment }} \
+          --tags \
+            Environment=${{ needs.validate.outputs.environment }} \
+            Project=qlio-serverless \
+            ManagedBy=github-actions \
+            Repository=${{ github.repository }} \
+            Commit=${{ github.sha }}
+    
+    - name: Deploy console UI
+      run: |
+        cd aws
+        
+        # Get console bucket name from CloudFormation
+        CONSOLE_BUCKET=$(aws cloudformation describe-stacks \
+          --stack-name qlio-serverless-${{ needs.validate.outputs.environment }} \
+          --query 'Stacks[0].Outputs[?OutputKey==`ConsoleBucket`].OutputValue' \
+          --output text)
+        
+        # Upload console files
+        aws s3 sync console/ s3://$CONSOLE_BUCKET/ \
+          --delete \
+          --cache-control "max-age=300"
+        
+        echo "Console deployed to bucket: $CONSOLE_BUCKET"
+    
+    - name: Upload sample configurations
+      run: |
+        cd aws
+        
+        # Get config bucket name from CloudFormation
+        CONFIG_BUCKET=$(aws cloudformation describe-stacks \
+          --stack-name qlio-serverless-${{ needs.validate.outputs.environment }} \
+          --query 'Stacks[0].Outputs[?OutputKey==`ConfigBucket`].OutputValue' \
+          --output text)
+        
+        # Upload sample tables if they exist
+        if [ -d "sample-tables" ]; then
+          aws s3 sync sample-tables/ s3://$CONFIG_BUCKET/tables/ \
+            --exclude "*.md"
+        fi
+        
+        echo "Configuration uploaded to bucket: $CONFIG_BUCKET"
+    
+    - name: Run post-deployment tests
+      run: |
+        cd aws
+        
+        # Get API URL from CloudFormation
+        API_URL=$(aws cloudformation describe-stacks \
+          --stack-name qlio-serverless-${{ needs.validate.outputs.environment }} \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
+          --output text)
+        
+        # Get API Key ID (but not the value for security)
+        API_KEY_ID=$(aws cloudformation describe-stacks \
+          --stack-name qlio-serverless-${{ needs.validate.outputs.environment }} \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiKeyId`].OutputValue' \
+          --output text)
+        
+        # Get API Key value for testing (not logged)
+        API_KEY=$(aws apigateway get-api-key \
+          --api-key $API_KEY_ID \
+          --include-value \
+          --query 'value' \
+          --output text)
+        
+        # Test tables endpoint (without exposing API key in logs)
+        echo "Testing API endpoints..."
+        
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          -X GET "$API_URL/tables" \
+          -H "X-API-Key: $API_KEY")
+        
+        if [ "$HTTP_STATUS" = "200" ]; then
+          echo "✅ Tables endpoint test passed"
+        else
+          echo "❌ Tables endpoint test failed (HTTP $HTTP_STATUS)"
+          exit 1
+        fi
+        
+        # Test query endpoint with simple query
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          -X POST "$API_URL/query" \
+          -H "X-API-Key: $API_KEY" \
+          -H "Content-Type: application/json" \
+          -d '{"query": "select '\''test'\'' as message"}')
+        
+        if [ "$HTTP_STATUS" = "200" ]; then
+          echo "✅ Query endpoint test passed"
+        else
+          echo "❌ Query endpoint test failed (HTTP $HTTP_STATUS)"
+          exit 1
+        fi
+    
+    - name: Generate deployment summary
+      run: |
+        cd aws
+        
+        # Get deployment information (without sensitive data)
+        API_URL=$(aws cloudformation describe-stacks \
+          --stack-name qlio-serverless-${{ needs.validate.outputs.environment }} \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
+          --output text)
+        
+        CONSOLE_URL=$(aws cloudformation describe-stacks \
+          --stack-name qlio-serverless-${{ needs.validate.outputs.environment }} \
+          --query 'Stacks[0].Outputs[?OutputKey==`ConsoleUrl`].OutputValue' \
+          --output text)
+        
+        CONFIG_BUCKET=$(aws cloudformation describe-stacks \
+          --stack-name qlio-serverless-${{ needs.validate.outputs.environment }} \
+          --query 'Stacks[0].Outputs[?OutputKey==`ConfigBucket`].OutputValue' \
+          --output text)
+        
+        CONSOLE_BUCKET=$(aws cloudformation describe-stacks \
+          --stack-name qlio-serverless-${{ needs.validate.outputs.environment }} \
+          --query 'Stacks[0].Outputs[?OutputKey==`ConsoleBucket`].OutputValue' \
+          --output text)
+        
+        # Create deployment summary (without API key)
+        cat > deployment-summary.json << EOF
+        {
+          "environment": "${{ needs.validate.outputs.environment }}",
+          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "commit": "${{ github.sha }}",
+          "apiUrl": "$API_URL",
+          "consoleUrl": "$CONSOLE_URL",
+          "configBucket": "$CONFIG_BUCKET",
+          "consoleBucket": "$CONSOLE_BUCKET",
+          "note": "API key available via: aws apigateway get-api-key --api-key <key-id> --include-value"
+        }
+        EOF
+        
+        echo "🚀 Deployment Summary:"
+        echo "Environment: ${{ needs.validate.outputs.environment }}"
+        echo "API URL: $API_URL"
+        echo "Console URL: $CONSOLE_URL"
+        echo ""
+        echo "⚠️  Security Note:"
+        echo "API key is not displayed for security reasons."
+        echo "Retrieve it using AWS CLI with appropriate permissions."
+    
+    - name: Upload deployment artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-summary-${{ needs.validate.outputs.environment }}
+        path: aws/deployment-summary.json
+        retention-days: 30
+
+  cleanup-on-failure:
+    needs: [validate, deploy]
+    if: failure() && needs.validate.outputs.environment == 'dev'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION || 'us-west-2' }}
+    
+    - name: Cleanup failed deployment (dev only)
+      run: |
+        echo "🧹 Cleaning up failed development deployment..."
+        
+        # Only cleanup dev environment automatically
+        if aws cloudformation describe-stacks --stack-name qlio-serverless-dev >/dev/null 2>&1; then
+          echo "Deleting failed stack: qlio-serverless-dev"
+          aws cloudformation delete-stack --stack-name qlio-serverless-dev
+          
+          echo "Waiting for stack deletion to complete..."
+          aws cloudformation wait stack-delete-complete --stack-name qlio-serverless-dev
+          
+          echo "✅ Cleanup completed"
+        else
+          echo "No stack found to cleanup"
+        fi

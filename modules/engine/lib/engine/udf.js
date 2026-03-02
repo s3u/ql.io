@@ -16,7 +16,7 @@
 
 'use strict';
 
-var jsonPath = require('jsonpath'),
+var jsonPath = require('./jsonpath-compat'),
     async = require('async'),
     _ = require('underscore');
 
